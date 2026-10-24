@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, TreePine, Check, ArrowRight, ArrowLeft, MapPin } from 'lucide-react';
+import { X, TreePine, Check, ArrowRight, ArrowLeft, MapPin, Lock, LogIn } from 'lucide-react';
 import type { TreeCreateRequest, HealthLevel, WateringLevel, SpeciesResponse } from '../types/tree';
 import { GpsAdjusterMap } from './GpsAdjusterMap';
 import { SpeciesSelect } from './SpeciesSelect';
 import { getDistanceMetersPrecise } from '../utils/geo';
 import { fetchAvailableSpecies } from '../services/species';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProposeTreeModalProps {
   isOpen: boolean;
@@ -19,6 +21,8 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
   defaultCoords,
   onSubmit,
 }) => {
+  const { isAuthenticated, openAuthModal } = useAuth();
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2>(1);
   const [species, setSpecies] = useState('');
   const [availableSpecies, setAvailableSpecies] = useState<SpeciesResponse[]>([]);
@@ -100,6 +104,54 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
   if (!isOpen) return null;
 
+  if (!isAuthenticated) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-card propose-auth-guard-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <div className="auth-brand-badge">
+              <TreePine size={24} color="#059669" />
+            </div>
+            <div className="auth-header-text">
+              <h3>{t('proposeTree.authGuardTitle')}</h3>
+              <p>{t('proposeTree.authGuardSubtitle')}</p>
+            </div>
+            <button className="close-btn" onClick={onClose} title={t('common.close')}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="auth-guard-content">
+            <div className="auth-guard-icon-box">
+              <Lock size={36} color="#059669" />
+            </div>
+            <p>
+              {t('proposeTree.authGuardDesc')}
+            </p>
+            <div className="auth-guard-actions">
+              <button type="button" className="secondary-btn" onClick={onClose}>
+                {t('proposeTree.authGuardCancel')}
+              </button>
+              <button
+                type="button"
+                className="primary-action-btn"
+                onClick={() => {
+                  onClose();
+                  openAuthModal(
+                    'login',
+                    t('proposeTree.authGuardPrompt')
+                  );
+                }}
+              >
+                <LogIn size={16} />
+                <span>{t('proposeTree.authGuardLoginBtn')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handlePositionChange = (pos: { lat: number; lng: number }, dist: number) => {
     setAdjustedPos(pos);
     setAdjustmentMeters(dist);
@@ -107,6 +159,13 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal(
+        'login',
+        t('proposeTree.authGuardPrompt')
+      );
+      return;
+    }
     if (!species.trim()) return;
 
     setIsSubmitting(true);
@@ -142,9 +201,9 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
         <div className="modal-header">
           <div className="modal-title-with-icon">
             <TreePine size={20} color="#10b981" />
-            <h3>Propune un Arbore Nou</h3>
+            <h3>{t('proposeTree.modalTitle')}</h3>
           </div>
-          <button className="close-btn" onClick={onClose}>
+          <button className="close-btn" onClick={onClose} title={t('common.close')}>
             <X size={18} />
           </button>
         </div>
@@ -153,8 +212,8 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
           <div className="feedback-banner">
             <Check size={28} color="#059669" />
             <div>
-              <strong>Arbore înregistrat cu succes!</strong>
-              <p>Acesta a fost adăugat pe hartă și trimis spre verificare.</p>
+              <strong>{t('proposeTree.successTitle')}</strong>
+              <p>{t('proposeTree.successBannerDesc')}</p>
             </div>
           </div>
         ) : (
@@ -167,7 +226,7 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                 onClick={() => setStep(1)}
               >
                 <span className="step-circle">{step > 1 ? <Check size={14} /> : '1'}</span>
-                <span className="step-name">1. Ajustare Poziție GPS</span>
+                <span className="step-name">{t('proposeTree.step1Nav')}</span>
               </button>
               <div className="step-track" />
               <button
@@ -176,7 +235,7 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                 onClick={() => setStep(2)}
               >
                 <span className="step-circle">2</span>
-                <span className="step-name">2. Detalii Arbore</span>
+                <span className="step-name">{t('proposeTree.step2Nav')}</span>
               </button>
             </div>
 
@@ -184,9 +243,9 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
               /* --- STEP 1: ADJUST THE POSITION --- */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className="step-instruction-box">
-                  <strong>Pasul 1: Confirmă și ajustează poziția pe hartă</strong>
+                  <strong>{t('proposeTree.step1InstructionTitle')}</strong>
                   <p style={{ margin: '4px 0 0 0' }}>
-                    Locația a fost preluată prin GPS-ul dispozitivului tău. Poți trage pinul verde pe hartă pentru o ajustare fină de până la <strong>1 metru</strong>.
+                    {t('proposeTree.step1InstructionDesc')}
                   </p>
                 </div>
 
@@ -205,15 +264,15 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
                 <div className="step-coords-summary">
                   <div className="coords-item">
-                    <span className="coords-label">Latitudine</span>
+                    <span className="coords-label">{t('proposeTree.latitude')}</span>
                     <span className="coords-val">{adjustedPos.lat.toFixed(6)}</span>
                   </div>
                   <div className="coords-item">
-                    <span className="coords-label">Longitudine</span>
+                    <span className="coords-label">{t('proposeTree.longitude')}</span>
                     <span className="coords-val">{adjustedPos.lng.toFixed(6)}</span>
                   </div>
                   <div className="coords-item">
-                    <span className="coords-label">Ajustare fină</span>
+                    <span className="coords-label">{t('proposeTree.fineAdjustment')}</span>
                     <span className="coords-val highlight">
                       {adjustmentMeters.toFixed(2)} m / 1.0 m
                     </span>
@@ -222,7 +281,7 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
                 <div className="modal-actions" style={{ marginTop: '8px' }}>
                   <button type="button" className="cancel-btn" onClick={onClose}>
-                    Anulează
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
@@ -230,7 +289,7 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     onClick={() => setStep(2)}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <span>Continuă la Pasul 2 (Detalii)</span>
+                    <span>{t('proposeTree.continueStep2Btn')}</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -242,24 +301,27 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                   <div className="chip-left">
                     <MapPin size={16} color="#059669" />
                     <span>
-                      Locație: <strong>{adjustedPos.lat.toFixed(5)}, {adjustedPos.lng.toFixed(5)}</strong>
+                      {t('proposeTree.locationLabelShort')}{' '}
+                      <strong>{adjustedPos.lat.toFixed(5)}, {adjustedPos.lng.toFixed(5)}</strong>
                       {adjustmentMeters > 0 && (
-                        <span className="dev-tag"> (ajustat {adjustmentMeters.toFixed(2)} m)</span>
+                        <span className="dev-tag">
+                          {' '}{t('proposeTree.adjustedDev', { dist: adjustmentMeters.toFixed(2) })}
+                        </span>
                       )}
                     </span>
                   </div>
                   <button type="button" className="edit-pos-btn" onClick={() => setStep(1)}>
-                    Modifică poziția
+                    {t('proposeTree.editPositionBtn')}
                   </button>
                 </div>
 
                 {/* Species selection with custom theme-matched dropdown */}
                 <div className="form-group">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ margin: 0 }}>Specie arbore (botanică sau comună) *</label>
+                    <label style={{ margin: 0 }}>{t('proposeTree.speciesLabel')}</label>
                     {availableSpecies.length > 0 && (
                       <span className="species-count-badge">
-                        {availableSpecies.length} specii în catalog
+                        {t('proposeTree.speciesCountBadge', { count: availableSpecies.length })}
                       </span>
                     )}
                   </div>
@@ -268,7 +330,7 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     onChange={setSpecies}
                     availableSpecies={availableSpecies}
                     isLoading={isLoadingSpecies}
-                    placeholder={isLoadingSpecies ? 'Se încarcă catalogul...' : 'Caută după nume comun sau științific (ex: Tei, Stejar, Platan...)'}
+                    placeholder={isLoadingSpecies ? t('proposeTree.catalogLoading') : t('proposeTree.speciesPlaceholderSearch')}
                     required
                     autoFocus
                   />
@@ -277,29 +339,29 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                 {/* Health & Watering Level */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Stare sănătate</label>
+                    <label>{t('proposeTree.healthLabel')}</label>
                     <select
                       value={healthLevel}
                       onChange={(e) => setHealthLevel(e.target.value as HealthLevel)}
                     >
-                      <option value="EXCELLENT">Excelentă</option>
-                      <option value="GOOD">Bună</option>
-                      <option value="FAIR">Acceptabilă</option>
-                      <option value="POOR">Precară</option>
-                      <option value="CRITICAL">Critică</option>
+                      <option value="EXCELLENT">{t('healthLevels.short_EXCELLENT')}</option>
+                      <option value="GOOD">{t('healthLevels.short_GOOD')}</option>
+                      <option value="FAIR">{t('healthLevels.short_FAIR')}</option>
+                      <option value="POOR">{t('healthLevels.short_POOR')}</option>
+                      <option value="CRITICAL">{t('healthLevels.short_CRITICAL')}</option>
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label>Nivel umiditate</label>
+                    <label>{t('proposeTree.wateringLabel')}</label>
                     <select
                       value={wateringLevel}
                       onChange={(e) => setWateringLevel(e.target.value as WateringLevel)}
                     >
-                      <option value="OPTIMAL">Optim</option>
-                      <option value="MODERATE">Moderat</option>
-                      <option value="LOW">Scăzut</option>
-                      <option value="CRITICAL_DROUGHT">Secetă critică</option>
+                      <option value="OPTIMAL">{t('wateringLevels.short_OPTIMAL')}</option>
+                      <option value="MODERATE">{t('wateringLevels.short_MODERATE')}</option>
+                      <option value="LOW">{t('wateringLevels.short_LOW')}</option>
+                      <option value="CRITICAL_DROUGHT">{t('wateringLevels.short_CRITICAL_DROUGHT')}</option>
                     </select>
                   </div>
                 </div>
@@ -307,29 +369,29 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                 {/* Tree metrics */}
                 <div className="form-row three-cols">
                   <div className="form-group">
-                    <label title="Înălțime în metri">Înălțime (m)</label>
+                    <label title={t('proposeTree.heightLabel')}>{t('proposeTree.heightShort')}</label>
                     <input
                       type="number"
                       step="0.5"
-                      placeholder="Ex: 8.5"
+                      placeholder={t('proposeTree.heightPlaceholder')}
                       value={height}
                       onChange={(e) => setHeight(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
-                    <label title="Vârstă estimată în ani">Vârstă (ani)</label>
+                    <label title={t('proposeTree.ageLabel')}>{t('proposeTree.ageShort')}</label>
                     <input
                       type="number"
-                      placeholder="Ex: 25"
+                      placeholder={t('proposeTree.agePlaceholder')}
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
-                    <label title="Circumferință trunchi în centimetri">Circumf. (cm)</label>
+                    <label title={t('proposeTree.trunkLabel')}>{t('proposeTree.trunkShort')}</label>
                     <input
                       type="number"
-                      placeholder="Ex: 110"
+                      placeholder={t('proposeTree.trunkPlaceholder')}
                       value={trunkCircumference}
                       onChange={(e) => setTrunkCircumference(e.target.value)}
                     />
@@ -338,10 +400,10 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
                 {/* Location Description */}
                 <div className="form-group">
-                  <label>Reper / Descriere locație</label>
+                  <label>{t('proposeTree.locationShort')}</label>
                   <input
                     type="text"
-                    placeholder="Ex: Parcul Central, aleea spre gară lângă fântână"
+                    placeholder={t('proposeTree.locationPlaceholderShort')}
                     value={locationDescription}
                     onChange={(e) => setLocationDescription(e.target.value)}
                   />
@@ -349,10 +411,10 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
                 {/* Notes */}
                 <div className="form-group">
-                  <label>Observații peisagistice</label>
+                  <label>{t('proposeTree.notesShort')}</label>
                   <textarea
                     rows={2}
-                    placeholder="Detalii despre coroană, frunze, sol..."
+                    placeholder={t('proposeTree.notesPlaceholderShort')}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
@@ -367,10 +429,10 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <ArrowLeft size={16} />
-                    <span>Înapoi la Poziționare</span>
+                    <span>{t('proposeTree.backStep1Btn')}</span>
                   </button>
                   <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                    {isSubmitting ? 'Se salvează...' : 'Trimite Propunerea'}
+                    {isSubmitting ? t('proposeTree.submittingBtn') : t('proposeTree.submitBtn')}
                   </button>
                 </div>
               </form>

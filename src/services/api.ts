@@ -2,6 +2,8 @@ import type { BoundingBox, TreeCheckinRequest, TreeCheckinResponse, TreeCreateRe
 import { MOCK_TIMISOARA_TREES } from '../data/mockTrees';
 import { getDistanceMeters } from '../utils/geo';
 import { getAppConfig } from './config';
+import { getStoredUser } from './auth';
+import { getUserTreeCheckinCooldown, recordUserTreeCheckin } from './checkinLimit';
 
 export interface ApiStatus {
   connected: boolean;
@@ -135,12 +137,40 @@ export async function fetchTreeById(id: number): Promise<TreeResponse | undefine
   return sessionTrees.find((t) => t.id === id);
 }
 
+export async function fetchTreeCheckins(treeId: number): Promise<TreeCheckinResponse[]> {
+  const config = getAppConfig();
+  if (config.mode === 'live') {
+    try {
+      const res = await fetch(`${config.backendHost}/api/trees/${treeId}/check-ins`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Return empty array on failure
+    }
+  }
+  return [];
+}
+
 export async function submitTreeCheckin(
   treeId: number,
   data: TreeCheckinRequest
 ): Promise<TreeCheckinResponse> {
   const config = getAppConfig();
   const token = localStorage.getItem('token');
+  const currentUser = getStoredUser();
+  const userId = currentUser?.id || currentUser?.email;
+
+  // Enforce 24-hour rate limit per tree per user
+  if (userId) {
+    const cooldown = getUserTreeCheckinCooldown(userId, treeId);
+    if (!cooldown.canCheckin) {
+      throw new Error(
+        `Ai înregistrat deja un check-in la acest arbore în ultimele 24 de ore. Revino peste ${cooldown.remainingFormatted}.`
+      );
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -158,7 +188,11 @@ export async function submitTreeCheckin(
     if (!res.ok) {
       throw new Error(`Eroare backend HTTP ${res.status}`);
     }
-    return await res.json();
+    const result: TreeCheckinResponse = await res.json();
+    if (userId) {
+      recordUserTreeCheckin(userId, treeId);
+    }
+    return result;
   }
 
   // Demo simulation
@@ -183,9 +217,15 @@ export async function submitTreeCheckin(
 
   sessionTrees = sessionTrees.map((t) => (t.id === treeId ? updatedTree : t));
 
+  // Record check-in for cooldown tracking
+  if (userId) {
+    recordUserTreeCheckin(userId, treeId);
+  }
+
   return {
     id: `demo-${Date.now()}`,
     treeId,
+    userId: currentUser?.id,
     latitude: data.latitude,
     longitude: data.longitude,
     deviationMeters: deviation,

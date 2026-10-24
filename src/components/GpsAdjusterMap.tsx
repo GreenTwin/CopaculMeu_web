@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { getDistanceMetersPrecise } from '../utils/geo';
 import { Navigation, RefreshCw, RotateCcw } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface GpsAdjusterMapProps {
   deviceBase: { lat: number; lng: number };
@@ -24,6 +25,7 @@ export const GpsAdjusterMap: React.FC<GpsAdjusterMapProps> = ({
   gpsStatus,
   height,
 }) => {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -254,26 +256,26 @@ export const GpsAdjusterMap: React.FC<GpsAdjusterMapProps> = ({
       <div className="gps-adjuster-header">
         <div className="gps-header-left">
           <Navigation size={16} className="gps-pulse-icon" />
-          <span className="gps-header-title">Locație GPS Dispozitiv</span>
+          <span className="gps-header-title">{t('gpsAdjuster.headerTitle')}</span>
         </div>
 
         <div className="gps-header-right">
           <span className={`gps-status-pill status-${gpsStatus}`}>
             {gpsStatus === 'locating'
-              ? 'Se citește GPS...'
+              ? t('gpsAdjuster.statusLocating')
               : gpsStatus === 'acquired'
-              ? 'GPS Activ (Dispozitiv) ✓'
-              : 'GPS Simulat'}
+              ? t('gpsAdjuster.statusAcquired')
+              : t('gpsAdjuster.statusFallback')}
           </span>
           <button
             type="button"
             className="recalibrate-gps-btn"
             onClick={onRecalibrate}
             disabled={isLocating}
-            title="Recalibrează poziția GPS de pe dispozitiv"
+            title={t('gpsAdjuster.recalibrateTooltip')}
           >
             <RefreshCw size={13} className={isLocating ? 'rotating' : ''} />
-            <span>Recalibrează</span>
+            <span>{t('gpsAdjuster.recalibrateBtn')}</span>
           </button>
         </div>
       </div>
@@ -288,11 +290,11 @@ export const GpsAdjusterMap: React.FC<GpsAdjusterMapProps> = ({
       {/* Footer with 1-meter meter & reset */}
       <div className="gps-adjuster-footer">
         <div className="adjustment-meter-info">
-          <span>Ajustare fină: </span>
+          <span>{t('gpsAdjuster.fineAdjustment')}</span>
           <strong className={adjustmentMeters >= 0.95 ? 'max-reached' : ''}>
             {adjustmentMeters.toFixed(2)} m
           </strong>
-          <span className="limit-hint"> (limitat la max 1.0 m)</span>
+          <span className="limit-hint">{t('gpsAdjuster.maxLimitHint')}</span>
         </div>
 
         {adjustmentMeters > 0.05 && (
@@ -300,17 +302,17 @@ export const GpsAdjusterMap: React.FC<GpsAdjusterMapProps> = ({
             type="button"
             className="reset-adjustment-btn"
             onClick={handleReset}
-            title="Resetează pinul exact pe poziția GPS a dispozitivului"
+            title={t('gpsAdjuster.resetTooltip')}
           >
             <RotateCcw size={12} />
-            <span>Resetează la 0.0 m</span>
+            <span>{t('gpsAdjuster.resetBtn')}</span>
           </button>
         )}
       </div>
 
       <div className="gps-adjuster-note">
         <span className="green-circle-indicator" />
-        <span>Trage pinul sau apasă în interiorul cercului verde (limită 1m) pentru ajustarea fină a poziției.</span>
+        <span>{t('gpsAdjuster.instructionNote')}</span>
       </div>
     </div>
   );

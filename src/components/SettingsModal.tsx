@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { X, Server, Database, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe } from 'lucide-react';
 import { AppConfig, getAppConfig, saveAppConfig } from '../services/config';
 import { testBackendHost } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { Language } from '../i18n/translations';
+import { RomaniaFlag, GreatBritainFlag } from './Flags';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,7 +17,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onConfigChanged,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const currentConfig = getAppConfig();
+  const [selectedLang, setSelectedLang] = useState<Language>(language);
   const [mode, setMode] = useState<'demo' | 'live'>(currentConfig.mode);
   const [backendHost, setBackendHost] = useState(currentConfig.backendHost);
   const [testing, setTesting] = useState(false);
@@ -32,6 +37,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (selectedLang !== language) {
+      setLanguage(selectedLang);
+    }
     const newConfig: AppConfig = {
       mode,
       backendHost: backendHost.trim() || 'http://localhost:8080',
@@ -47,17 +55,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="modal-header">
           <div className="modal-title-with-icon">
             <Server size={20} color="#10b981" />
-            <h3>Configurare Sursă Date & Backend</h3>
+            <h3>{t('settingsModal.modalTitle')}</h3>
           </div>
-          <button className="close-btn" onClick={onClose}>
+          <button className="close-btn" onClick={onClose} title={t('common.close')}>
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSave} className="checkin-form">
+          {/* Language Selector */}
+          <div className="form-group">
+            <label className="section-title-label">
+              <Globe size={16} />
+              <span>{t('settingsModal.languageSectionTitle')}</span>
+            </label>
+            <p className="form-help-text" style={{ marginTop: 2, marginBottom: 8 }}>
+              {t('settingsModal.languageSectionDesc')}
+            </p>
+            <div className="language-selector-grid">
+              <button
+                type="button"
+                className={`language-option-card ${selectedLang === 'ro' ? 'selected' : ''}`}
+                onClick={() => setSelectedLang('ro')}
+              >
+                <RomaniaFlag size={26} />
+                <div className="lang-info">
+                  <strong>Română</strong>
+                  <span>Romanian</span>
+                </div>
+                {selectedLang === 'ro' && <Check size={16} className="lang-check" />}
+              </button>
+
+              <button
+                type="button"
+                className={`language-option-card ${selectedLang === 'en' ? 'selected' : ''}`}
+                onClick={() => setSelectedLang('en')}
+              >
+                <GreatBritainFlag size={26} />
+                <div className="lang-info">
+                  <strong>English</strong>
+                  <span>Engleză</span>
+                </div>
+                {selectedLang === 'en' && <Check size={16} className="lang-check" />}
+              </button>
+            </div>
+          </div>
+
           {/* Mode Selector */}
           <div className="form-group">
-            <label>Mod de funcționare aplicație:</label>
+            <label>{t('settingsModal.appModeSectionTitle')}</label>
             <div className="mode-selector-grid">
               <label
                 className={`mode-option-card ${mode === 'demo' ? 'selected' : ''}`}
@@ -71,12 +117,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={() => setMode('demo')}
                   />
                   <Database size={18} />
-                  <strong>Mod Demo (Curated)</strong>
+                  <strong>{t('settingsModal.demoModeTitle')}</strong>
                 </div>
-                <p>
-                  Încarcă catalogul realist de arbori din parcurile Timișoarei. Ideal pentru
-                  prezentări, testare UI și demonstrații offline.
-                </p>
+                <p>{t('settingsModal.demoModeDesc')}</p>
               </label>
 
               <label
@@ -91,18 +134,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={() => setMode('live')}
                   />
                   <Server size={18} />
-                  <strong>Server Backend Live</strong>
+                  <strong>{t('settingsModal.liveModeTitle')}</strong>
                 </div>
-                <p>
-                  Efectuează apeluri REST reale către serverul Spring Boot configurat mai jos.
-                </p>
+                <p>{t('settingsModal.liveModeDesc')}</p>
               </label>
             </div>
           </div>
 
           {/* Backend Host configuration */}
           <div className="form-group">
-            <label>Adresă Server Backend REST (Host):</label>
+            <label>{t('settingsModal.hostLabel')}</label>
             <div className="host-input-row">
               <input
                 type="text"
@@ -118,11 +159,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 disabled={testing}
               >
                 <RefreshCw size={14} className={testing ? 'rotating' : ''} />
-                <span>{testing ? 'Testare...' : 'Testează Conexiunea'}</span>
+                <span>{testing ? t('settingsModal.testingBtn') : t('settingsModal.testConnBtn')}</span>
               </button>
             </div>
             <span className="form-help-text">
-              Punctul de intrare REST pentru apeluri precum <code>/api/trees/area</code> și <code>/api/trees/{'{id}'}/check-ins</code>.
+              {t('settingsModal.hostHelpText')}
             </span>
           </div>
 
@@ -144,10 +185,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="modal-actions">
             <button type="button" className="cancel-btn" onClick={onClose}>
-              Anulează
+              {t('settingsModal.cancelBtn')}
             </button>
             <button type="submit" className="submit-btn">
-              Salvează & Aplică
+              {t('settingsModal.saveAndApplyBtn')}
             </button>
           </div>
         </form>

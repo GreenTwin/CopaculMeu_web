@@ -26,15 +26,24 @@ export function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2)} km`;
 }
 
-// Relative time formatting in Romanian
-export function formatRelativeTime(dateString?: string | null): string {
-  if (!dateString) return 'Niciodată';
+// Relative time formatting in Romanian or English
+export function formatRelativeTime(dateString?: string | null, lang: 'ro' | 'en' = 'ro'): string {
+  if (!dateString) return lang === 'en' ? 'Never' : 'Niciodată';
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (lang === 'en') {
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  }
 
   if (diffMinutes < 1) return 'Chiar acum';
   if (diffMinutes < 60) return `Acum ${diffMinutes} min`;

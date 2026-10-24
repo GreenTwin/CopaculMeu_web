@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { TreePine, ChevronDown, Check, X, Plus, Sparkles, Loader2 } from 'lucide-react';
 import type { SpeciesResponse } from '../types/tree';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SpeciesSelectProps {
   value: string;
@@ -41,10 +42,11 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
   onChange,
   availableSpecies,
   isLoading = false,
-  placeholder = 'Alege sau caută o specie...',
+  placeholder,
   autoFocus = false,
   required = false,
 }) => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -160,7 +162,7 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
           type="text"
           className="species-select-input"
           value={value}
-          placeholder={isLoading ? 'Se încarcă catalogul de specii...' : placeholder}
+          placeholder={isLoading ? t('speciesSelect.loadingCatalog') : placeholder || t('speciesSelect.chooseOrSearch')}
           required={required}
           autoFocus={autoFocus}
           autoComplete="off"
@@ -175,7 +177,7 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
 
         <div className="species-control-actions">
           {isLoading && (
-            <div className="species-loading-icon" title="Se încarcă speciile">
+            <div className="species-loading-icon" title={t('speciesSelect.loadingSpeciesTooltip')}>
               <Loader2 size={15} className="rotating" color="#059669" />
             </div>
           )}
@@ -185,7 +187,7 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
               type="button"
               className="species-action-btn clear-btn"
               onClick={handleClear}
-              title="Șterge selecția"
+              title={t('speciesSelect.clearSelectionTooltip')}
             >
               <X size={14} />
             </button>
@@ -198,7 +200,7 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
               setIsOpen((prev) => !prev);
               inputRef.current?.focus();
             }}
-            title={isOpen ? 'Închide lista' : 'Deschide lista speciilor'}
+            title={isOpen ? t('speciesSelect.toggleListOpen') : t('speciesSelect.toggleListClosed')}
           >
             <ChevronDown size={16} />
           </button>
@@ -211,10 +213,10 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
           <div className="species-dropdown-header">
             <span className="dropdown-title">
               <Sparkles size={13} color="#059669" />
-              <span>Catalog Specii Timișoara</span>
+              <span>{t('speciesSelect.catalogHeader')}</span>
             </span>
             <span className="dropdown-counter">
-              {filteredSpecies.length} {filteredSpecies.length === 1 ? 'specie' : 'specii'}
+              {filteredSpecies.length} {filteredSpecies.length === 1 ? t('speciesSelect.speciesCountSingle') : t('speciesSelect.speciesCountPlural')}
             </span>
           </div>
 
@@ -265,16 +267,16 @@ export const SpeciesSelect: React.FC<SpeciesSelectProps> = ({
                 </div>
                 <div className="species-option-text">
                   <div className="species-common-name">
-                    Folosește <strong>„{value.trim()}”</strong>
+                    {t('speciesSelect.useCustomOption')} <strong>„{value.trim()}”</strong>
                   </div>
-                  <div className="species-scientific-name">Specie nouă / nestandardizată</div>
+                  <div className="species-scientific-name">{t('speciesSelect.customNewSpecies')}</div>
                 </div>
               </li>
             )}
 
             {filteredSpecies.length === 0 && hasExactMatch && (
               <li className="species-empty-notice">
-                Nu am găsit specii conform căutării. Tastează un nume nou pentru a-l propune.
+                {t('speciesSelect.emptyNotice')}
               </li>
             )}
           </ul>

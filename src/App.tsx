@@ -5,6 +5,9 @@ import { MapControls } from './components/MapControls';
 import { TreeDrawer } from './features/tree-details/TreeDrawer';
 import { ProposeTreeModal } from './components/ProposeTreeModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AuthModal } from './components/AuthModal';
+import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import {
   fetchTreesInArea,
   submitTreeCheckin,
@@ -131,58 +134,65 @@ export const App: React.FC = () => {
   }, [trees, searchQuery, filterDroughtOnly]);
 
   return (
-    <div className="app-container">
-      {/* Top Header */}
-      <Header
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        apiStatus={apiStatus}
-        onOpenProposeModal={() => setIsProposeOpen(true)}
-        onOpenSettingsModal={() => setIsSettingsOpen(true)}
-        totalVisibleTrees={filteredTrees.length}
-      />
+    <LanguageProvider>
+      <AuthProvider>
+        <div className="app-container">
+          {/* Top Header */}
+          <Header
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            apiStatus={apiStatus}
+            onOpenProposeModal={() => setIsProposeOpen(true)}
+            onOpenSettingsModal={() => setIsSettingsOpen(true)}
+            totalVisibleTrees={filteredTrees.length}
+          />
 
-      {/* Main Map with clean cluster bubbles */}
-      <MapCanvas
-        trees={filteredTrees}
-        selectedTree={selectedTree}
-        onSelectTree={setSelectedTree}
-        onBoundsChange={handleBoundsChange}
-        userLocation={userLocation}
-      />
+          {/* Main Map with clean cluster bubbles */}
+          <MapCanvas
+            trees={filteredTrees}
+            selectedTree={selectedTree}
+            onSelectTree={setSelectedTree}
+            onBoundsChange={handleBoundsChange}
+            userLocation={userLocation}
+          />
 
-      {/* Floating HUD Controls */}
-      <MapControls
-        onLocateUser={handleLocateUser}
-        isLocating={isLocating}
-        filterDroughtOnly={filterDroughtOnly}
-        onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
-      />
+          {/* Floating HUD Controls */}
+          <MapControls
+            onLocateUser={handleLocateUser}
+            isLocating={isLocating}
+            filterDroughtOnly={filterDroughtOnly}
+            onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
+          />
 
-      {/* Tree Details Drawer & Check-in Flow */}
-      <TreeDrawer
-        tree={selectedTree}
-        onClose={() => setSelectedTree(null)}
-        userLocation={userLocation}
-        onSubmitCheckin={handleCheckinSubmit}
-        onSimulateNearby={handleSimulateNearby}
-      />
+          {/* Tree Details Drawer & Check-in Flow */}
+          <TreeDrawer
+            tree={selectedTree}
+            onClose={() => setSelectedTree(null)}
+            userLocation={userLocation}
+            onSubmitCheckin={handleCheckinSubmit}
+            onSimulateNearby={handleSimulateNearby}
+          />
 
-      {/* Propose Tree Modal */}
-      <ProposeTreeModal
-        isOpen={isProposeOpen}
-        onClose={() => setIsProposeOpen(false)}
-        defaultCoords={userLocation || { lat: TIMISOARA_DEFAULT_CENTER.lat, lng: TIMISOARA_DEFAULT_CENTER.lng }}
-        onSubmit={handleProposeSubmit}
-      />
+          {/* Propose Tree Modal */}
+          <ProposeTreeModal
+            isOpen={isProposeOpen}
+            onClose={() => setIsProposeOpen(false)}
+            defaultCoords={userLocation || { lat: TIMISOARA_DEFAULT_CENTER.lat, lng: TIMISOARA_DEFAULT_CENTER.lng }}
+            onSubmit={handleProposeSubmit}
+          />
 
-      {/* Settings Modal (Demo vs Live Backend & Host configuration) */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onConfigChanged={handleConfigChanged}
-      />
-    </div>
+          {/* Settings Modal (Demo vs Live Backend & Host configuration) */}
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            onConfigChanged={handleConfigChanged}
+          />
+
+          {/* Authentication Modal (Login & Register) */}
+          <AuthModal />
+        </div>
+      </AuthProvider>
+    </LanguageProvider>
   );
 };
 

@@ -207,6 +207,45 @@ export interface SpeciesResponse {
 }
 ```
 
+### 5.3 Authentication & User Profile Models
+
+#### `User` (Citizen Volunteer / Administrator)
+```typescript
+export interface User {
+  id: string;                               // UUID v4
+  email: string;
+  name: string;
+  role: 'USER' | 'ADMIN';
+  status: 'UNCONFIRMED' | 'ACTIVE' | 'SUSPENDED';
+  createdAt?: string;
+  updatedAt?: string;
+}
+```
+
+#### `LoginRequest` & `RegisterRequest`
+```typescript
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;                         // Minimum 8 characters
+}
+```
+
+#### `AuthResponse` (JWT Token Session)
+```typescript
+export interface AuthResponse {
+  accessToken: string;                      // JWT Bearer token
+  tokenType: string;                        // "Bearer"
+  expiresIn: number;                        // Lifetime in seconds (86400)
+  user: User;
+}
+```
+
 > [!IMPORTANT]
 > **Check-in GPS Validation Rule:**
 > The backend calculates `deviationMeters` between the user's check-in GPS and the tree's recorded position. The check-in is flagged `valid: true` only if the deviation is within the strict threshold (typically ≤ 2.0 meters). The frontend UI must provide a live proximity indicator guiding the user close to the tree before enabling the check-in submission button.
@@ -281,6 +320,30 @@ To eliminate form clutter, prevent user input errors, and ensure centimeter-leve
      * Seamless support for uncatalogued/novel species via `Folosește „...” ca specie nouă`.
    * Gathers tree health, watering level, height (m), estimated age (years), trunk circumference (cm), location landmarks, and visual notes.
    * Submits `TreeCreateRequest` to `/api/trees/propose` with zero manual coordinate typing.
+
+### 6.5 User Authentication & Citizen Volunteer Profile Experience
+
+To support community tree guardianship, check-ins, and verified proposals:
+1. **JWT Session Lifecycle (`auth.ts` & `AuthContext.tsx`):**
+   * Stores access tokens in `localStorage.getItem('token')`, automatically attached to backend API headers (`Authorization: Bearer <token>`).
+   * Validates stored sessions on app mount via `GET /api/auth/me`. Expired or revoked tokens automatically clear the session.
+   * Invalidates token server-side upon logout via `POST /api/auth/logout`.
+2. **Dual-Mode Operation:**
+   * **Live Mode:** Dispatches requests to the configured Spring Boot backend endpoints (`/api/auth/login`, `/api/users/register`, `/api/auth/me`, `/api/auth/logout`).
+   * **Demo Mode:** Simulates immediate, local authentication and registration with mock volunteer profiles without requiring backend connectivity.
+3. **Authentication & Email Confirmation Modal (`AuthModal.tsx`):**
+   * Multi-view flow covering **Autentificare**, **Înregistrare**, and **Confirmare Email**.
+   * Form validation with interactive password visibility toggles (`Eye`/`EyeOff`), minimum 8-character requirements, and matching password confirmations.
+   * **Email Activation Screen (`confirm_email`):**
+     * Automatically presented immediately following registration.
+     * Displays target email address with quick inline edit option.
+     * 6-cell numeric PIN code verification input with auto-advance, backspace navigation, and clipboard paste support.
+     * Resend code button with 60-second cooldown timer.
+     * Instant visual celebration screen (`CheckCircle2`) and automatic session login upon code validation.
+   * Features a 1-click *"Autentificare rapidă cu profil voluntar demo"* button for instant review and testing.
+4. **Header User Menu (`UserMenu.tsx`):**
+   * Non-authenticated state: Prominent, clean *"Autentificare"* CTA in the header.
+   * Authenticated state: Personalized avatar badge with volunteer initials (e.g. `MP`), first name, admin role indicator, and a floating dropdown menu for account overview and instant logout.
 
 ---
 
@@ -426,8 +489,28 @@ c:\Projects\compacul_meu\CopaculMeu_web\
 
 ---
 
-## 10. Summary & Next Steps
+## 10. Authentication & Citizen Action Authorization
+
+Pentru a garanta calitatea datelor și prevenirea abuzurilor în monitorizarea ecologică a Timișoarei, anumite acțiuni sunt strict restricționate utilizatorilor înregistrați și autentificați:
+
+### 10.1 Reguli de autorizare
+1. **Navigare pe Hartă & Inspectare Arbori:**
+   - **Publică (Anonim / Oaspeți):** Vizualizarea hărții, căutarea speciilor, filtrarea alertelor de secetă și inspectarea detaliilor oricărui arbore din `TreeDrawer` sunt deschise oricui.
+2. **Propunerea unui Arbore Nou (`Propune Arbore`):**
+   - **Rezervată utilizatorilor înregistrați:**
+     - La apăsarea butonului din `Header` (`.propose-tree-btn`), utilizatorii neautentificați primesc direct dialogul `AuthModal` cu un banner contextual de notificare.
+     - În `ProposeTreeModal`, există o barieră de securitate de rezervă (`propose-auth-guard-modal`) care redirecționează către autentificare dacă sesiunea lipsește.
+3. **Fă Check-in & Înregistrează Udare (`POST /api/trees/{id}/check-ins`):**
+   - **Rezervată utilizatorilor înregistrați:**
+     - În panoul lateral/drawer `TreeDrawer`, dacă utilizatorul nu este autentificat, butonul de check-in este înlocuit cu cardul `.auth-required-checkin-card` ce explică clar cerința de securitate și oferă butonul direct `Conectează-te pentru Check-in`.
+     - Dialogul de check-in include un ecran de gardă (`checkin-auth-modal`) ce împiedică transmiterea datelor fără token valid de autentificare.
+   - **Limitare 24 de ore per arbore (`checkinLimit.ts`):**
+     - **Regulă de business:** Un voluntar poate efectua check-in la mai mulți arbori distincți în aceeași zi, însă **același arbore poate primi check-in doar o singură dată la fiecare 24 de ore** din partea aceluiași utilizator (`${userId}:${treeId}`).
+     - **Stare Cooldown:** Dacă utilizatorul a efectuat deja check-in pe arbore în ultimele 24 de ore, panoul `TreeDrawer` afișează automat cardul `.checkin-cooldown-card` cu un cronometru dinamic al timpului rămas (ex: *„Disponibil în: 23 ore și 45 min”*), iar butonul devine inactiv.
+     - **Sincronizare:** Înregistrările sunt persistate în `localStorage` (`copaculmeu_user_tree_checkins`) și validate atât în interfață, cât și la nivel de API în funcția `submitTreeCheckin`.
+
+---
+
+## 11. Summary & Next Steps
 
 This technical documentation provides a clear, comprehensive blueprint for building the **CopaculMeu** frontend using only open technologies, centered on Timișoara, with a responsive, modern glassmorphic interface and high-performance clustering.
-
-When ready to proceed, we will initialize the Vite React project, configure the design system tokens, and construct the interactive clustered map interface.
