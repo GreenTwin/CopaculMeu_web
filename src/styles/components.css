@@ -2732,6 +2732,64 @@
   margin-bottom: 4px;
 }
 
+.checkin-success-icon-box {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border: 2px solid #86efac;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  animation: successIconPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes successIconPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.checkin-success-desc {
+  font-size: 0.92rem;
+  color: var(--neutral-700);
+  margin-bottom: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.checkin-success-details-card {
+  width: 100%;
+  background: var(--neutral-50, #f8fafc);
+  border: 1px solid var(--neutral-200, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.success-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--neutral-600);
+}
+
+.success-detail-row strong {
+  color: var(--neutral-900);
+  font-weight: 600;
+}
+
 /* ==========================================================================
    Language Selector & Quick Toggle Styles
    ========================================================================== */

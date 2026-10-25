@@ -66,7 +66,14 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [cooldownTick, setCooldownTick] = useState(0);
+
+  const handleCloseCheckinModal = () => {
+    setIsCheckinOpen(false);
+    setIsSuccess(false);
+    setFeedbackMsg(null);
+  };
 
   // Determine 24h cooldown for current user on this specific tree
   const cooldownStatus = useMemo(() => {
@@ -156,11 +163,8 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
         setCooldownTick((t) => t + 1);
       }
 
+      setIsSuccess(true);
       setFeedbackMsg(t('treeDrawer.checkinSuccessFeedback'));
-      setTimeout(() => {
-        setIsCheckinOpen(false);
-        setFeedbackMsg(null);
-      }, 2000);
     } catch {
       setFeedbackMsg(t('treeDrawer.checkinErrorFeedback'));
     } finally {
@@ -351,7 +355,11 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
             <button
               type="button"
               className="primary-action-btn"
-              onClick={() => setIsCheckinOpen(true)}
+              onClick={() => {
+                setIsSuccess(false);
+                setFeedbackMsg(null);
+                setIsCheckinOpen(true);
+              }}
             >
               <Droplets size={18} />
               <span>{t('treeDrawer.doCheckinBtn')}</span>
@@ -362,13 +370,13 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
 
       {/* Check-in Modal Form */}
       {isCheckinOpen && (
-        <div className="modal-backdrop" onClick={() => setIsCheckinOpen(false)}>
+        <div className="modal-backdrop" onClick={handleCloseCheckinModal}>
           <div className="modal-card checkin-auth-modal" onClick={(e) => e.stopPropagation()}>
             {!isAuthenticated ? (
               <div className="auth-guard-body">
                 <div className="modal-header auth-guard-header-row">
                   <h3>{t('treeDrawer.authModalTitle')}</h3>
-                  <button className="close-btn" onClick={() => setIsCheckinOpen(false)}>
+                  <button className="close-btn" onClick={handleCloseCheckinModal}>
                     <X size={18} />
                   </button>
                 </div>
@@ -383,7 +391,7 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
                   <button
                     type="button"
                     className="secondary-btn"
-                    onClick={() => setIsCheckinOpen(false)}
+                    onClick={handleCloseCheckinModal}
                   >
                     {t('common.cancel')}
                   </button>
@@ -391,7 +399,7 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
                     type="button"
                     className="primary-action-btn"
                     onClick={() => {
-                      setIsCheckinOpen(false);
+                      handleCloseCheckinModal();
                       openAuthModal(
                         'login',
                         t('treeDrawer.authRequiredCardDesc')
@@ -403,11 +411,57 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
                   </button>
                 </div>
               </div>
+            ) : isSuccess ? (
+              <div className="auth-guard-body checkin-success-body">
+                <div className="modal-header auth-guard-header-row">
+                  <div className="modal-title-with-icon">
+                    <Sparkles size={20} color="#059669" />
+                    <h3>{t('treeDrawer.successModalTitle')}</h3>
+                  </div>
+                  <button className="close-btn" onClick={handleCloseCheckinModal}>
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="checkin-success-icon-box">
+                  <CheckCircle2 size={44} color="#059669" />
+                </div>
+                <h4>{t('treeDrawer.successModalHeading')}</h4>
+                <p className="checkin-success-desc">
+                  {feedbackMsg || t('treeDrawer.checkinSuccessFeedback')}
+                </p>
+                <div className="checkin-success-details-card">
+                  <div className="success-detail-row">
+                    <span>🌱 {t('treeDrawer.wateredQuestion')}</span>
+                    <strong>{watered ? '✓ ' + (t('common.yes') || 'Da') : '✗ ' + (t('common.no') || 'Nu')}</strong>
+                  </div>
+                  <div className="success-detail-row">
+                    <span>💧 {t('treeDrawer.soilMoistureLabel')}</span>
+                    <strong>{t('wateringLevels.short_' + wateringLevel)}</strong>
+                  </div>
+                  <div className="success-detail-row">
+                    <span>❤️ {t('treeDrawer.overallHealthLabel')}</span>
+                    <strong>{t('healthLevels.short_' + healthLevel)}</strong>
+                  </div>
+                </div>
+                <div className="cooldown-timer-badge">
+                  <Clock size={15} />
+                  <span>{t('treeDrawer.cooldownModalTimer', { remaining: cooldownStatus.remainingFormatted })}</span>
+                </div>
+                <div className="auth-guard-actions">
+                  <button
+                    type="button"
+                    className="primary-action-btn"
+                    onClick={handleCloseCheckinModal}
+                  >
+                    {t('treeDrawer.successCloseBtn')}
+                  </button>
+                </div>
+              </div>
             ) : !cooldownStatus.canCheckin ? (
               <div className="auth-guard-body">
                 <div className="modal-header auth-guard-header-row">
                   <h3>{t('treeDrawer.cooldownModalTitle')}</h3>
-                  <button className="close-btn" onClick={() => setIsCheckinOpen(false)}>
+                  <button className="close-btn" onClick={handleCloseCheckinModal}>
                     <X size={18} />
                   </button>
                 </div>
@@ -426,7 +480,7 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
                   <button
                     type="button"
                     className="primary-action-btn"
-                    onClick={() => setIsCheckinOpen(false)}
+                    onClick={handleCloseCheckinModal}
                   >
                     {t('treeDrawer.understoodBtn')}
                   </button>
@@ -436,14 +490,14 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
               <>
                 <div className="modal-header">
                   <h3>{t('treeDrawer.checkinModalTitle', { species: tree.species })}</h3>
-                  <button className="close-btn" onClick={() => setIsCheckinOpen(false)}>
+                  <button className="close-btn" onClick={handleCloseCheckinModal}>
                     <X size={18} />
                   </button>
                 </div>
 
-                {feedbackMsg ? (
-                  <div className="feedback-banner">
-                    <Check size={24} color="#059669" />
+                {feedbackMsg && !isSuccess ? (
+                  <div className="feedback-banner error" style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c' }}>
+                    <AlertTriangle size={20} color="#dc2626" />
                     <p>{feedbackMsg}</p>
                   </div>
                 ) : (
