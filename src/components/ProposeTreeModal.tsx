@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, TreePine, Check, ArrowRight, ArrowLeft, MapPin, Lock, LogIn } from 'lucide-react';
 import type { TreeCreateRequest, HealthLevel, WateringLevel, SpeciesResponse } from '../types/tree';
 import { GpsAdjusterMap } from './GpsAdjusterMap';
@@ -27,11 +27,16 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
   const [species, setSpecies] = useState('');
   const [availableSpecies, setAvailableSpecies] = useState<SpeciesResponse[]>([]);
   const [isLoadingSpecies, setIsLoadingSpecies] = useState(false);
+
+  // Preserve stable reference to defaultCoords to prevent re-triggering effects
+  const defaultCoordsRef = useRef(defaultCoords);
+  defaultCoordsRef.current = defaultCoords;
+
   const [deviceBase, setDeviceBase] = useState<{ lat: number; lng: number }>(defaultCoords);
   const [adjustedPos, setAdjustedPos] = useState<{ lat: number; lng: number }>(defaultCoords);
   const [adjustmentMeters, setAdjustmentMeters] = useState(0);
   const [isLocating, setIsLocating] = useState(false);
-  const [gpsStatus, setGpsStatus] = useState<'locating' | 'acquired' | 'fallback'>('locating');
+  const [gpsStatus, setGpsStatus] = useState<'locating' | 'acquired' | 'fallback'>('acquired');
 
   const [healthLevel, setHealthLevel] = useState<HealthLevel>('GOOD');
   const [wateringLevel, setWateringLevel] = useState<WateringLevel>('OPTIMAL');
@@ -43,11 +48,12 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Acquire high-precision device GPS on open
+  // Manual / on-demand recalibration of device GPS (e.g. clicking 'Recalibrează' in map)
   const fetchDeviceGps = useCallback(() => {
     if (!navigator.geolocation) {
-      setDeviceBase(defaultCoords);
-      setAdjustedPos(defaultCoords);
+      const fallback = defaultCoordsRef.current;
+      setDeviceBase(fallback);
+      setAdjustedPos(fallback);
       setGpsStatus('fallback');
       return;
     }
@@ -68,10 +74,10 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
         setIsLocating(false);
       },
       (err) => {
-        console.warn('Geolocation error during propose:', err.message);
-        // Fallback to defaultCoords if user denied or outside
-        setDeviceBase(defaultCoords);
-        setAdjustedPos(defaultCoords);
+        console.warn('Geolocation recalibration notice:', err.message);
+        const fallback = defaultCoordsRef.current;
+        setDeviceBase(fallback);
+        setAdjustedPos(fallback);
         setAdjustmentMeters(0);
         setGpsStatus('fallback');
         setIsLocating(false);
@@ -82,12 +88,19 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
         maximumAge: 0,
       }
     );
-  }, [defaultCoords]);
+  }, []);
 
+  // Initialize once per modal open
   useEffect(() => {
     if (isOpen) {
       setStep(1);
-      fetchDeviceGps();
+      // Initialize with the stable snapshot of defaultCoords
+      const initial = defaultCoordsRef.current;
+      setDeviceBase(initial);
+      setAdjustedPos(initial);
+      setAdjustmentMeters(0);
+      setGpsStatus('acquired');
+
       setIsLoadingSpecies(true);
       fetchAvailableSpecies()
         .then((list) => {
@@ -100,7 +113,7 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
           setIsLoadingSpecies(false);
         });
     }
-  }, [isOpen, fetchDeviceGps]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

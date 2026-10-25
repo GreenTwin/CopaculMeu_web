@@ -59,9 +59,10 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Continuous real-time GPS tracking when in 'live' location mode (default)
+  // Continuous real-time GPS tracking when in 'live' location mode (default), paused when proposing a tree
   useEffect(() => {
-    if (appConfig.locationMode !== 'live') return;
+    // If not in live mode, or if propose tree modal is open, pause live location tracking
+    if (appConfig.locationMode !== 'live' || isProposeOpen) return;
     if (!navigator.geolocation) {
       console.warn('Geolocation is not supported by this browser.');
       return;
@@ -94,7 +95,7 @@ export const App: React.FC = () => {
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [appConfig.locationMode]);
+  }, [appConfig.locationMode, isProposeOpen]);
 
   // Locate User / Center camera on user's position
   const handleLocateUser = () => {
@@ -218,7 +219,7 @@ export const App: React.FC = () => {
             isLocating={isLocating}
             filterDroughtOnly={filterDroughtOnly}
             onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
-            isLiveTracking={appConfig.locationMode === 'live'}
+            isLiveTracking={appConfig.locationMode === 'live' && !isProposeOpen}
           />
 
           {/* Tree Details Drawer & Check-in Flow */}
