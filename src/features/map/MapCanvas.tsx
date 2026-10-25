@@ -8,6 +8,8 @@ import Supercluster from 'supercluster';
 import type { TreeResponse, BoundingBox } from '../../types/tree';
 import { TIMISOARA_DEFAULT_CENTER } from '../../data/mockTrees';
 import { openMapTilesTerrainStyle } from '../../styles/openMapTilesTerrainStyle';
+import { darkMatterStyle } from '../../styles/darkMatterStyle';
+import { useTheme } from '../../context/ThemeContext';
 
 // Register MapLibre Web Worker for Vite background vector tile processing
 setWorkerUrl(workerUrl);
@@ -29,14 +31,16 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   userLocation,
   flyToCoords,
 }) => {
+  const { theme } = useTheme();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.Layer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const superclusterRef = useRef<Supercluster | null>(null);
+  const currentThemeRef = useRef(theme);
 
-  // Initialize Leaflet Map with OpenMapTiles Terrain GL Theme (100% Free Open Technologies)
+  // Initialize Leaflet Map with OpenMapTiles GL Theme (Terrain for Light, Dark Matter for Dark)
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -51,9 +55,12 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     // Zoom control at top-right
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // OpenMapTiles Terrain GL Layer via MapLibre Leaflet adapter (OpenFreeMap vector + Mapterhorn Terrarium DEM)
+    // Initial GL style based on current theme
+    const activeStyle = currentThemeRef.current === 'dark' ? darkMatterStyle : openMapTilesTerrainStyle;
+
+    // OpenMapTiles GL Layer via MapLibre Leaflet adapter
     const glLayer = (L as any).maplibreGL({
-      style: openMapTilesTerrainStyle,
+      style: activeStyle,
       padding: 0.15,
     }).addTo(map);
     tileLayerRef.current = glLayer;
@@ -65,7 +72,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           console.warn('[MapLibre Warning]', e);
         });
         libreMap.on('load', () => {
-          console.log('[MapLibre] OpenMapTiles Terrain style loaded successfully');
+          console.log('[MapLibre] Style loaded successfully');
         });
       }
     } catch (err) {
@@ -99,7 +106,20 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     };
   }, []);
 
-  // Initialize & update Supercluster whenever trees change
+  // Switch MapLibre vector style dynamically when theme changes (Terrain for Light, Dark Matter for Dark)
+  useEffect(() => {
+    currentThemeRef.current = theme;
+    if (!tileLayerRef.current) return;
+    try {
+      const libreMap = (tileLayerRef.current as any).getMaplibreMap?.();
+      if (libreMap) {
+        const nextStyle = theme === 'dark' ? darkMatterStyle : openMapTilesTerrainStyle;
+        libreMap.setStyle(nextStyle);
+      }
+    } catch (err) {
+      console.warn('Could not switch MapLibre style:', err);
+    }
+  }, [theme]);
   useEffect(() => {
     const cluster = new Supercluster({
       radius: 60,

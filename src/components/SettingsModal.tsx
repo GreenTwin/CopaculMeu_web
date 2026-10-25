@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair } from 'lucide-react';
+import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair, Sun, Moon } from 'lucide-react';
 import { AppConfig, getAppConfig, saveAppConfig } from '../services/config';
 import { testBackendHost } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { Language } from '../i18n/translations';
 import { RomaniaFlag, GreatBritainFlag } from './Flags';
 
@@ -18,6 +19,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onConfigChanged,
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const currentConfig = getAppConfig();
   const [mode, setMode] = useState<'demo' | 'live'>(currentConfig.mode);
   const [backendHost, setBackendHost] = useState(currentConfig.backendHost);
@@ -106,6 +108,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>Engleză</span>
                 </div>
                 {language === 'en' && <Check size={16} className="lang-check" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Interface & Map Theme Selector */}
+          <div className="form-group">
+            <label className="section-title-label">
+              <Sun size={16} />
+              <span>{t('settingsModal.themeSectionTitle')}</span>
+            </label>
+            <p className="form-help-text" style={{ marginTop: 2, marginBottom: 8 }}>
+              {t('settingsModal.themeSectionDesc')}
+            </p>
+            <div className="theme-selector-grid">
+              <button
+                type="button"
+                className={`theme-option-card ${theme === 'light' ? 'selected' : ''}`}
+                onClick={() => setTheme('light')}
+              >
+                <div className="theme-card-icon-wrap light">
+                  <Sun size={22} />
+                </div>
+                <div className="theme-info">
+                  <strong>{t('settingsModal.themeLightTitle')}</strong>
+                  <span>{t('settingsModal.themeLightDesc')}</span>
+                </div>
+                {theme === 'light' && <Check size={16} className="theme-check" />}
+              </button>
+
+              <button
+                type="button"
+                className={`theme-option-card ${theme === 'dark' ? 'selected' : ''}`}
+                onClick={() => setTheme('dark')}
+              >
+                <div className="theme-card-icon-wrap dark">
+                  <Moon size={22} />
+                </div>
+                <div className="theme-info">
+                  <strong>{t('settingsModal.themeDarkTitle')}</strong>
+                  <span>{t('settingsModal.themeDarkDesc')}</span>
+                </div>
+                {theme === 'dark' && <Check size={16} className="theme-check" />}
               </button>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
 import {
   fetchTreesInArea,
   submitTreeCheckin,
@@ -190,67 +191,69 @@ export const App: React.FC = () => {
   }, [trees, searchQuery, filterDroughtOnly]);
 
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <div className="app-container">
-          {/* Top Header */}
-          <Header
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            apiStatus={apiStatus}
-            onOpenProposeModal={() => setIsProposeOpen(true)}
-            onOpenSettingsModal={() => setIsSettingsOpen(true)}
-            totalVisibleTrees={filteredTrees.length}
-          />
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <div className="app-container">
+            {/* Top Header */}
+            <Header
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              apiStatus={apiStatus}
+              onOpenProposeModal={() => setIsProposeOpen(true)}
+              onOpenSettingsModal={() => setIsSettingsOpen(true)}
+              totalVisibleTrees={filteredTrees.length}
+            />
 
-          {/* Main Map with clean cluster bubbles */}
-          <MapCanvas
-            trees={filteredTrees}
-            selectedTree={selectedTree}
-            onSelectTree={setSelectedTree}
-            onBoundsChange={handleBoundsChange}
-            userLocation={userLocation}
-            flyToCoords={flyToCoords}
-          />
+            {/* Main Map with clean cluster bubbles */}
+            <MapCanvas
+              trees={filteredTrees}
+              selectedTree={selectedTree}
+              onSelectTree={setSelectedTree}
+              onBoundsChange={handleBoundsChange}
+              userLocation={userLocation}
+              flyToCoords={flyToCoords}
+            />
 
-          {/* Floating HUD Controls */}
-          <MapControls
-            onLocateUser={handleLocateUser}
-            isLocating={isLocating}
-            filterDroughtOnly={filterDroughtOnly}
-            onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
-            isLiveTracking={appConfig.locationMode === 'live' && !isProposeOpen}
-          />
+            {/* Floating HUD Controls */}
+            <MapControls
+              onLocateUser={handleLocateUser}
+              isLocating={isLocating}
+              filterDroughtOnly={filterDroughtOnly}
+              onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
+              isLiveTracking={appConfig.locationMode === 'live' && !isProposeOpen}
+            />
 
-          {/* Tree Details Drawer & Check-in Flow */}
-          <TreeDrawer
-            tree={selectedTree}
-            onClose={() => setSelectedTree(null)}
-            userLocation={userLocation}
-            onSubmitCheckin={handleCheckinSubmit}
-            onSimulateNearby={handleSimulateNearby}
-          />
+            {/* Tree Details Drawer & Check-in Flow */}
+            <TreeDrawer
+              tree={selectedTree}
+              onClose={() => setSelectedTree(null)}
+              userLocation={userLocation}
+              onSubmitCheckin={handleCheckinSubmit}
+              onSimulateNearby={handleSimulateNearby}
+            />
 
-          {/* Propose Tree Modal */}
-          <ProposeTreeModal
-            isOpen={isProposeOpen}
-            onClose={() => setIsProposeOpen(false)}
-            defaultCoords={userLocation || { lat: TIMISOARA_DEFAULT_CENTER.lat, lng: TIMISOARA_DEFAULT_CENTER.lng }}
-            onSubmit={handleProposeSubmit}
-          />
+            {/* Propose Tree Modal */}
+            <ProposeTreeModal
+              isOpen={isProposeOpen}
+              onClose={() => setIsProposeOpen(false)}
+              defaultCoords={userLocation || { lat: TIMISOARA_DEFAULT_CENTER.lat, lng: TIMISOARA_DEFAULT_CENTER.lng }}
+              onSubmit={handleProposeSubmit}
+            />
 
-          {/* Settings Modal (Demo vs Live Backend & Host configuration) */}
-          <SettingsModal
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
-            onConfigChanged={handleConfigChanged}
-          />
+            {/* Settings Modal (Demo vs Live Backend & Host configuration) */}
+            <SettingsModal
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+              onConfigChanged={handleConfigChanged}
+            />
 
-          {/* Authentication Modal (Login & Register) */}
-          <AuthModal />
-        </div>
-      </AuthProvider>
-    </LanguageProvider>
+            {/* Authentication Modal (Login & Register) */}
+            <AuthModal />
+          </div>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 };
 

@@ -47,18 +47,27 @@
   --transition-bounce: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Dark Mode Overrides (Optional user toggle) */
+/* Dark Mode Overrides */
 [data-theme='dark'] {
-  --glass-bg: rgba(15, 23, 42, 0.85);
+  --glass-bg: rgba(15, 23, 42, 0.88);
   --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.5);
+  --glass-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65);
   --neutral-900: #f8fafc;
   --neutral-800: #f1f5f9;
   --neutral-700: #e2e8f0;
   --neutral-600: #cbd5e1;
   --neutral-500: #94a3b8;
-  --neutral-100: #1e293b;
+  --neutral-400: #64748b;
+  --neutral-300: #475569;
   --neutral-200: #334155;
+  --neutral-100: #1e293b;
+}
+
+[data-theme='dark'] body,
+[data-theme='dark'] #root,
+[data-theme='dark'] .app-container {
+  background-color: #090d16;
+  color: var(--neutral-900);
 }
 
 * {

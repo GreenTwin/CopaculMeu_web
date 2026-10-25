@@ -1,9 +1,10 @@
 import React from 'react';
-import { TreePine, Search, PlusCircle, Activity, Settings, Server, Lock, Globe } from 'lucide-react';
+import { TreePine, Search, PlusCircle, Activity, Settings, Server, Lock, Globe, Sun, Moon } from 'lucide-react';
 import type { ApiStatus } from '../services/api';
 import { UserMenu } from './UserMenu';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { RomaniaFlag, GreatBritainFlag } from './Flags';
 
 interface HeaderProps {
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isLive = apiStatus?.source === 'backend_live';
   const { isAuthenticated, openAuthModal } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
 
   const handleProposeClick = () => {
     if (!isAuthenticated) {
@@ -130,6 +132,21 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="lang-code">EN</span>
           </button>
         </div>
+
+        {/* Quick Theme Toggle (Light / Dark) */}
+        <button
+          type="button"
+          className={`theme-toggle-btn ${theme}`}
+          onClick={toggleTheme}
+          title={t('header.themeToggleTooltip')}
+          aria-label={theme === 'dark' ? 'Comută la tema luminoasă' : 'Comută la tema întunecată'}
+        >
+          {theme === 'dark' ? (
+            <Sun size={17} className="theme-toggle-icon theme-sun" />
+          ) : (
+            <Moon size={17} className="theme-toggle-icon theme-moon" />
+          )}
+        </button>
 
         {/* Settings button */}
         <button
