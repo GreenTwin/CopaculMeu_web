@@ -7,6 +7,7 @@ interface MapControlsProps {
   isLocating: boolean;
   filterDroughtOnly: boolean;
   onToggleDroughtFilter: () => void;
+  isLiveTracking?: boolean;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
@@ -14,6 +15,7 @@ export const MapControls: React.FC<MapControlsProps> = ({
   isLocating,
   filterDroughtOnly,
   onToggleDroughtFilter,
+  isLiveTracking = false,
 }) => {
   const { t } = useLanguage();
   const [isLegendOpen, setIsLegendOpen] = useState(false);
@@ -34,14 +36,21 @@ export const MapControls: React.FC<MapControlsProps> = ({
           </span>
         </button>
 
-        {/* Locate Me */}
+        {/* Locate Me / Center on user */}
         <button
-          className={`hud-btn ${isLocating ? 'loading' : ''}`}
+          className={`hud-btn ${isLiveTracking ? 'live-gps-active' : ''} ${isLocating ? 'loading' : ''}`}
           onClick={onLocateUser}
-          title={t('mapControls.locateTooltip')}
+          title={isLiveTracking ? t('mapControls.locateTooltipLive') : t('mapControls.locateTooltip')}
         >
+          {isLiveTracking && <span className="hud-live-indicator" />}
           <Crosshair size={18} />
-          <span className="hud-label">{isLocating ? t('mapControls.locating') : t('mapControls.locateMe')}</span>
+          <span className="hud-label">
+            {isLocating
+              ? t('mapControls.locating')
+              : isLiveTracking
+              ? t('mapControls.locateMeLive')
+              : t('mapControls.locateMe')}
+          </span>
         </button>
 
         {/* Legend Toggle */}

@@ -18,6 +18,7 @@ interface MapCanvasProps {
   onSelectTree: (tree: TreeResponse | null) => void;
   onBoundsChange: (bounds: BoundingBox) => void;
   userLocation: { lat: number; lng: number } | null;
+  flyToCoords?: { lat: number; lng: number; ts: number } | null;
 }
 
 export const MapCanvas: React.FC<MapCanvasProps> = ({
@@ -26,6 +27,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   onSelectTree,
   onBoundsChange,
   userLocation,
+  flyToCoords,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -232,7 +234,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           iconSize: [20, 20],
           iconAnchor: [10, 10],
         });
-        userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map);
+        userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], {
+          icon: userIcon,
+          zIndexOffset: 1000,
+        }).addTo(map);
       } else {
         userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
       }
@@ -241,6 +246,17 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       userMarkerRef.current = null;
     }
   }, [userLocation]);
+
+  // Fly camera to target coordinates smoothly when requested (initial fix or 'Where am I' click)
+  useEffect(() => {
+    if (!flyToCoords || !mapRef.current) return;
+    const map = mapRef.current;
+    const targetZoom = Math.max(map.getZoom(), 16);
+    map.flyTo([flyToCoords.lat, flyToCoords.lng], targetZoom, {
+      duration: 1.2,
+      easeLinearity: 0.25,
+    });
+  }, [flyToCoords]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>

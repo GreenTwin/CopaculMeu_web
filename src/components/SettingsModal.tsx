@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe } from 'lucide-react';
+import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair } from 'lucide-react';
 import { AppConfig, getAppConfig, saveAppConfig } from '../services/config';
 import { testBackendHost } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -19,11 +19,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const currentConfig = getAppConfig();
-  const [selectedLang, setSelectedLang] = useState<Language>(language);
   const [mode, setMode] = useState<'demo' | 'live'>(currentConfig.mode);
   const [backendHost, setBackendHost] = useState(currentConfig.backendHost);
+  const [locationMode, setLocationMode] = useState<'live' | 'manual'>(currentConfig.locationMode || 'live');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  // Synchronize configuration whenever the modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      const cfg = getAppConfig();
+      setMode(cfg.mode);
+      setBackendHost(cfg.backendHost);
+      setLocationMode(cfg.locationMode || 'live');
+      setTestResult(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -37,12 +48,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedLang !== language) {
-      setLanguage(selectedLang);
-    }
     const newConfig: AppConfig = {
       mode,
       backendHost: backendHost.trim() || 'http://localhost:8080',
+      locationMode,
     };
     saveAppConfig(newConfig);
     onConfigChanged(newConfig);
@@ -75,28 +84,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="language-selector-grid">
               <button
                 type="button"
-                className={`language-option-card ${selectedLang === 'ro' ? 'selected' : ''}`}
-                onClick={() => setSelectedLang('ro')}
+                className={`language-option-card ${language === 'ro' ? 'selected' : ''}`}
+                onClick={() => setLanguage('ro')}
               >
                 <RomaniaFlag size={26} />
                 <div className="lang-info">
                   <strong>Română</strong>
                   <span>Romanian</span>
                 </div>
-                {selectedLang === 'ro' && <Check size={16} className="lang-check" />}
+                {language === 'ro' && <Check size={16} className="lang-check" />}
               </button>
 
               <button
                 type="button"
-                className={`language-option-card ${selectedLang === 'en' ? 'selected' : ''}`}
-                onClick={() => setSelectedLang('en')}
+                className={`language-option-card ${language === 'en' ? 'selected' : ''}`}
+                onClick={() => setLanguage('en')}
               >
                 <GreatBritainFlag size={26} />
                 <div className="lang-info">
                   <strong>English</strong>
                   <span>Engleză</span>
                 </div>
-                {selectedLang === 'en' && <Check size={16} className="lang-check" />}
+                {language === 'en' && <Check size={16} className="lang-check" />}
               </button>
             </div>
           </div>
@@ -137,6 +146,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <strong>{t('settingsModal.liveModeTitle')}</strong>
                 </div>
                 <p>{t('settingsModal.liveModeDesc')}</p>
+              </label>
+            </div>
+          </div>
+
+          {/* Location Tracking Selector */}
+          <div className="form-group">
+            <label className="section-title-label">
+              <Navigation size={16} />
+              <span>{t('settingsModal.locationSectionTitle')}</span>
+            </label>
+            <p className="form-help-text" style={{ marginTop: 2, marginBottom: 8 }}>
+              {t('settingsModal.locationSectionDesc')}
+            </p>
+            <div className="mode-selector-grid">
+              <label
+                className={`mode-option-card ${locationMode === 'live' ? 'selected' : ''}`}
+                onClick={() => setLocationMode('live')}
+              >
+                <div className="mode-radio-header">
+                  <input
+                    type="radio"
+                    name="locationMode"
+                    checked={locationMode === 'live'}
+                    onChange={() => setLocationMode('live')}
+                  />
+                  <Navigation size={18} color="#2563eb" />
+                  <strong>{t('settingsModal.locationLiveTitle')}</strong>
+                </div>
+                <p>{t('settingsModal.locationLiveDesc')}</p>
+              </label>
+
+              <label
+                className={`mode-option-card ${locationMode === 'manual' ? 'selected' : ''}`}
+                onClick={() => setLocationMode('manual')}
+              >
+                <div className="mode-radio-header">
+                  <input
+                    type="radio"
+                    name="locationMode"
+                    checked={locationMode === 'manual'}
+                    onChange={() => setLocationMode('manual')}
+                  />
+                  <Crosshair size={18} color="#64748b" />
+                  <strong>{t('settingsModal.locationManualTitle')}</strong>
+                </div>
+                <p>{t('settingsModal.locationManualDesc')}</p>
               </label>
             </div>
           </div>

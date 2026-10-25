@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapCanvas } from './features/map/MapCanvas';
 import { Header } from './components/Header';
 import { MapControls } from './components/MapControls';
@@ -16,14 +16,16 @@ import {
 } from './services/api';
 import type { TreeResponse, BoundingBox, TreeCheckinRequest, TreeCreateRequest } from './types/tree';
 import { TIMISOARA_DEFAULT_CENTER } from './data/mockTrees';
-import type { AppConfig } from './services/config';
+import { getAppConfig, type AppConfig } from './services/config';
 
 export const App: React.FC = () => {
+  const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const [trees, setTrees] = useState<TreeResponse[]>([]);
   const [selectedTree, setSelectedTree] = useState<TreeResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDroughtOnly, setFilterDroughtOnly] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number; ts: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [isProposeOpen, setIsProposeOpen] = useState(false);
@@ -31,6 +33,7 @@ export const App: React.FC = () => {
 
   const debounceTimeoutRef = useRef<number | null>(null);
   const currentBoundsRef = useRef<BoundingBox | null>(null);
+  const hasInitialCenterRef = useRef(false);
 
   // Viewport bounds change handler (debounced)
   const handleBoundsChange = useCallback((bounds: BoundingBox) => {
@@ -46,8 +49,9 @@ export const App: React.FC = () => {
     }, 300);
   }, []);
 
-  // Reload data when config (Demo / Live host) changes
-  const handleConfigChanged = useCallback(async (_newConfig: AppConfig) => {
+  // Reload data when config (Demo / Live host / Location mode) changes
+  const handleConfigChanged = useCallback(async (newConfig: AppConfig) => {
+    setAppConfig(newConfig);
     if (currentBoundsRef.current) {
       const result = await fetchTreesInArea(currentBoundsRef.current);
       setTrees(result.trees);
@@ -55,8 +59,55 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // HTML5 Geolocation tracking
+  // Continuous real-time GPS tracking when in 'live' location mode (default)
+  useEffect(() => {
+    if (appConfig.locationMode !== 'live') return;
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        setUserLocation(coords);
+
+        // Center camera on user once on initial acquisition
+        if (!hasInitialCenterRef.current) {
+          hasInitialCenterRef.current = true;
+          setFlyToCoords({ ...coords, ts: Date.now() });
+        }
+      },
+      (error) => {
+        console.warn('Live geolocation watch notice:', error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 10000,
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [appConfig.locationMode]);
+
+  // Locate User / Center camera on user's position
   const handleLocateUser = () => {
+    // If location is already known (e.g., from continuous live tracking), center directly
+    if (userLocation) {
+      setFlyToCoords({
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        ts: Date.now(),
+      });
+      return;
+    }
+
     if (!navigator.geolocation) {
       alert('Geolocația nu este suportată de acest browser.');
       return;
@@ -65,18 +116,20 @@ export const App: React.FC = () => {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        const coords = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        });
+        };
+        setUserLocation(coords);
+        setFlyToCoords({ ...coords, ts: Date.now() });
         setIsLocating(false);
       },
       (error) => {
         console.warn('Geolocation error:', error.message);
-        setUserLocation({
-          lat: 45.7537,
-          lng: 21.2257,
-        });
+        // Fallback to Timișoara default center coordinates
+        const fallback = { lat: 45.7537, lng: 21.2257 };
+        setUserLocation(fallback);
+        setFlyToCoords({ ...fallback, ts: Date.now() });
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -86,10 +139,12 @@ export const App: React.FC = () => {
   // Simulate user standing right next to selected tree for rapid testing of check-in
   const handleSimulateNearby = (tree: TreeResponse) => {
     // 0.00001 degrees is ~1.1 meters
-    setUserLocation({
+    const simCoords = {
       lat: tree.latitude + 0.00001,
       lng: tree.longitude + 0.00001,
-    });
+    };
+    setUserLocation(simCoords);
+    setFlyToCoords({ ...simCoords, ts: Date.now() });
   };
 
   // Check-in submission
@@ -154,6 +209,7 @@ export const App: React.FC = () => {
             onSelectTree={setSelectedTree}
             onBoundsChange={handleBoundsChange}
             userLocation={userLocation}
+            flyToCoords={flyToCoords}
           />
 
           {/* Floating HUD Controls */}
@@ -162,6 +218,7 @@ export const App: React.FC = () => {
             isLocating={isLocating}
             filterDroughtOnly={filterDroughtOnly}
             onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
+            isLiveTracking={appConfig.locationMode === 'live'}
           />
 
           {/* Tree Details Drawer & Check-in Flow */}
