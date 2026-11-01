@@ -1,5 +1,5 @@
 import type { SpeciesResponse } from '../types/tree';
-import { getAppConfig } from './config';
+import { DEFAULT_BACKEND_HOST, getAppConfig } from './config';
 
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes cache duration
 const STORAGE_KEY = 'copaculmeu_species_cache';
@@ -106,7 +106,7 @@ export async function fetchAvailableSpecies(): Promise<SpeciesResponse[]> {
   // 3. Initiate network fetch with de-duplication
   inflightPromise = (async () => {
     const config = getAppConfig();
-    const host = config.backendHost || 'http://localhost:8080';
+    const host = config.backendHost || DEFAULT_BACKEND_HOST;
     const targetUrl = `${host.trim().replace(/\/+$/, '')}/api/species`;
 
     try {

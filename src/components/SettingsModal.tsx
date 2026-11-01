@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair, Sun, Moon } from 'lucide-react';
-import { AppConfig, getAppConfig, saveAppConfig } from '../services/config';
+import { AppConfig, DEFAULT_BACKEND_HOST, getAppConfig, saveAppConfig } from '../services/config';
 import { testBackendHost } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -52,7 +52,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     e.preventDefault();
     const newConfig: AppConfig = {
       mode,
-      backendHost: backendHost.trim() || 'http://localhost:8080',
+      backendHost: backendHost.trim() || DEFAULT_BACKEND_HOST,
       locationMode,
     };
     saveAppConfig(newConfig);
@@ -247,7 +247,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Ex: http://localhost:8080"
+                placeholder={`Ex: ${DEFAULT_BACKEND_HOST}`}
                 value={backendHost}
                 onChange={(e) => setBackendHost(e.target.value)}
               />
