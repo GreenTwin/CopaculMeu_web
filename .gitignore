@@ -5,6 +5,10 @@ node_modules
 
 # Testing & Coverage
 coverage
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Production Build
 dist
