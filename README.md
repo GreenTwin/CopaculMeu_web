@@ -8,6 +8,14 @@ A modern, responsive, open-source web and mobile application for mapping, explor
 
 ---
 
+## UI tests
+
+Playwright covers the current screen: language, sign-in, the guest gate on Propose Tree, demo mode, search, and theme.
+
+```bash
+npm run test:e2e
+```
+
 ## Technical Documentation
 
 Detailed architectural decisions, data models, map clustering algorithms, UI design specifications, and mobile migration roadmap are documented in:
