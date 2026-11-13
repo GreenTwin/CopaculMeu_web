@@ -182,6 +182,71 @@ export async function fetchCurrentUser(): Promise<User | null> {
 /**
  * User logout
  */
+export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
+  const config = getAppConfig();
+  const res = await fetch(`${config.backendHost}/api/auth/google`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  });
+
+  if (!res.ok) {
+    let message = 'Social sign-in failed';
+    try {
+      const json = await res.json();
+      if (typeof json.message === 'string' && json.message) {
+        message = json.message;
+      }
+    } catch {
+      // keep the generic message
+    }
+    throw new Error(message);
+  }
+
+  const authData: AuthResponse = await res.json();
+  setSession(authData);
+  return authData;
+}
+
+export async function issueSocialNonce(): Promise<string> {
+  const config = getAppConfig();
+  const res = await fetch(`${config.backendHost}/api/auth/social/nonce`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new Error('Social sign-in failed');
+  }
+  const body = (await res.json()) as { nonce?: string };
+  if (!body.nonce) {
+    throw new Error('Social sign-in failed');
+  }
+  return body.nonce;
+}
+
+let googleScript: Promise<void> | null = null;
+
+export function loadGoogleIdentityScript(): Promise<void> {
+  if (window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+  if (!googleScript) {
+    googleScript = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        googleScript = null;
+        reject(new Error('Social sign-in failed'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return googleScript;
+}
+
 export async function logoutUser(): Promise<void> {
   const token = getStoredToken();
   const config = getAppConfig();

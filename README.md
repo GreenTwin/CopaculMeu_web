@@ -10,7 +10,7 @@ A modern, responsive, open-source web and mobile application for mapping, explor
 
 ## UI tests
 
-Playwright covers the current screen: language, sign-in, the guest gate on Propose Tree, demo mode, search, and theme.
+Playwright covers the current screen: language, sign-in, the guest gate on Propose Tree, demo mode, search, and theme. The Google tests check the button on Sign In and Register, that demo mode hides it, and that a rejected token stays on the sign-in form. A completed sign-in uses the same callback as the Google button. Playwright cannot finish Google's own account chooser, and the API accepts only a token Google signed.
 
 ```bash
 npm run test:e2e
