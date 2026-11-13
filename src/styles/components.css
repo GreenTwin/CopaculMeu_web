@@ -1739,6 +1739,34 @@
   animation: fadeIn 0.15s ease;
 }
 
+.auth-social {
+  padding: 16px 24px 0;
+}
+
+.auth-google-button {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.auth-social-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  color: var(--neutral-500);
+  font-size: 0.75rem;
+  text-transform: lowercase;
+}
+
+.auth-social-divider::before,
+.auth-social-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--neutral-200);
+}
+
 .auth-form {
   padding: 18px 24px 20px;
   display: flex;

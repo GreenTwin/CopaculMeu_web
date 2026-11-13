@@ -7,6 +7,7 @@ import {
   registerUser,
   fetchCurrentUser,
   logoutUser,
+  loginWithGoogle,
 } from '../services/auth';
 
 interface AuthContextType {
@@ -14,6 +15,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
+  signInWithGoogle: (idToken: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<User>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
@@ -55,6 +57,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const auth = await loginUser(credentials);
+      setUser(auth.user);
+      setIsAuthModalOpen(false);
+      setAuthContextMessage(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const signInWithGoogle = useCallback(async (idToken: string) => {
+    setIsLoading(true);
+    try {
+      const auth = await loginWithGoogle(idToken);
       setUser(auth.user);
       setIsAuthModalOpen(false);
       setAuthContextMessage(null);
@@ -106,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        signInWithGoogle,
         register,
         logout,
         isAuthModalOpen,
