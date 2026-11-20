@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { confirmEmailCode, resendActivationCode } from '../services/auth';
+import { confirmEmailCode, issueSocialNonce, loadGoogleIdentityScript, resendActivationCode } from '../services/auth';
+import { getAppConfig } from '../services/config';
 
 export const AuthModal: React.FC = () => {
   const { t } = useLanguage();
@@ -30,6 +31,7 @@ export const AuthModal: React.FC = () => {
     closeAuthModal,
     login,
     register,
+    signInWithGoogle,
     openAuthModal,
   } = useAuth();
 
@@ -55,6 +57,11 @@ export const AuthModal: React.FC = () => {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const showGoogle = getAppConfig().mode === 'live' && Boolean(googleClientId);
+  const signInWithGoogleRef = useRef(signInWithGoogle);
+  signInWithGoogleRef.current = signInWithGoogle;
 
   // Resend countdown timer
   useEffect(() => {
@@ -73,6 +80,66 @@ export const AuthModal: React.FC = () => {
       }, 100);
     }
   }, [isConfirmEmail, isConfirmedSuccess]);
+
+  useEffect(() => {
+    if (!isAuthModalOpen || isConfirmEmail || !showGoogle || !googleClientId) {
+      return;
+    }
+
+    let cancelled = false;
+    const parent = googleButtonRef.current;
+
+    (async () => {
+      try {
+        const nonce = await issueSocialNonce();
+        await loadGoogleIdentityScript();
+        if (cancelled || !parent || !window.google?.accounts?.id) {
+          return;
+        }
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          nonce,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          callback: (response) => {
+            if (!response.credential) {
+              return;
+            }
+            setIsSubmitting(true);
+            setErrorMessage(null);
+            signInWithGoogleRef.current(response.credential)
+              .then(() => resetForm())
+              .catch((err: unknown) => {
+                const message = err instanceof Error ? err.message : '';
+                setErrorMessage(message && message !== 'Social sign-in failed'
+                  ? message
+                  : t('authModal.googleSignInFailed'));
+              })
+              .finally(() => setIsSubmitting(false));
+          },
+        });
+        parent.replaceChildren();
+        window.google.accounts.id.renderButton(parent, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          width: Math.min(parent.clientWidth || 360, 400),
+          logo_alignment: 'left',
+        });
+      } catch {
+        if (!cancelled) {
+          setErrorMessage(t('authModal.googleSignInFailed'));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      window.google?.accounts?.id.cancel();
+    };
+  }, [isAuthModalOpen, isConfirmEmail, showGoogle, googleClientId, t]);
 
   if (!isAuthModalOpen) return null;
 
@@ -336,6 +403,13 @@ export const AuthModal: React.FC = () => {
               <div className="auth-error-banner">
                 <AlertCircle size={16} />
                 <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {showGoogle && (
+              <div className="auth-social">
+                <div ref={googleButtonRef} className="auth-google-button" />
+                <div className="auth-social-divider">{t('authModal.orDivider')}</div>
               </div>
             )}
 
