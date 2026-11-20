@@ -4,12 +4,67 @@ import { getAppConfig } from './config';
 export const TOKEN_STORAGE_KEY = 'token';
 export const USER_STORAGE_KEY = 'copaculmeu_user';
 
+// In-memory token cache (defense-in-depth: avoids persistent disk exposure)
+let inMemoryToken: string | null = null;
+
+/**
+ * Validates that a token has a well-formed JWT structure (3 dot-separated base64 segments).
+ * Rejects empty, corrupt, or malicious strings before header injection.
+ */
+export function isValidJwtFormat(token: string | null): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.trim().split('.');
+  return parts.length === 3 && parts.every((p) => p.length > 0);
+}
+
 export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (inMemoryToken && isValidJwtFormat(inMemoryToken)) {
+    return inMemoryToken;
+  }
+
+  // Check tab-scoped sessionStorage first
+  try {
+    const sessionToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    if (sessionToken && isValidJwtFormat(sessionToken)) {
+      inMemoryToken = sessionToken;
+      return sessionToken;
+    }
+  } catch {
+    // sessionStorage not available (e.g. strict private mode)
+  }
+
+  // Backward compatibility / migration: check localStorage and migrate to sessionStorage
+  try {
+    const localToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (localToken && isValidJwtFormat(localToken)) {
+      inMemoryToken = localToken;
+      try {
+        sessionStorage.setItem(TOKEN_STORAGE_KEY, localToken);
+      } catch {}
+      // Remove token from persistent disk storage
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      return localToken;
+    }
+  } catch {}
+
+  return null;
 }
 
 export function getStoredUser(): User | null {
-  const raw = localStorage.getItem(USER_STORAGE_KEY);
+  let raw: string | null = null;
+
+  try {
+    raw = sessionStorage.getItem(USER_STORAGE_KEY);
+    if (!raw) {
+      raw = localStorage.getItem(USER_STORAGE_KEY);
+      if (raw) {
+        // Migrate to sessionStorage and clean up localStorage
+        sessionStorage.setItem(USER_STORAGE_KEY, raw);
+        localStorage.removeItem(USER_STORAGE_KEY);
+      }
+    }
+  } catch {}
+
   if (!raw) return null;
   try {
     return JSON.parse(raw) as User;
@@ -19,13 +74,30 @@ export function getStoredUser(): User | null {
 }
 
 export function setSession(auth: AuthResponse): void {
-  localStorage.setItem(TOKEN_STORAGE_KEY, auth.accessToken);
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(auth.user));
+  inMemoryToken = auth.accessToken;
+
+  try {
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, auth.accessToken);
+    sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(auth.user));
+    // Clean up legacy tokens from persistent localStorage
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+  } catch {
+    // Fallback if sessionStorage is blocked
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(auth.user));
+  }
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-  localStorage.removeItem(USER_STORAGE_KEY);
+  inMemoryToken = null;
+  try {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(USER_STORAGE_KEY);
+  } catch {}
+  try {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+  } catch {}
 }
 
 /**
@@ -111,7 +183,9 @@ export async function fetchCurrentUser(): Promise<User | null> {
 
     if (res.ok) {
       const user: User = await res.json();
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      try {
+        sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      } catch {}
       return user;
     } else if (res.status === 401) {
       // Token expired or invalid

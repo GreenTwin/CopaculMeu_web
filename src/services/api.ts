@@ -1,6 +1,6 @@
 import type { BoundingBox, TreeCheckinRequest, TreeCheckinResponse, TreeCreateRequest, TreeResponse } from '../types/tree';
 import { getAppConfig } from './config';
-import { getStoredUser } from './auth';
+import { getStoredUser, getStoredToken } from './auth';
 import { getUserTreeCheckinCooldown, recordUserTreeCheckin } from './checkinLimit';
 
 export interface ApiStatus {
@@ -121,7 +121,7 @@ export async function submitTreeCheckin(
   data: TreeCheckinRequest
 ): Promise<TreeCheckinResponse> {
   const config = getAppConfig();
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   const currentUser = getStoredUser();
   const userId = currentUser?.id || currentUser?.email;
 
@@ -160,7 +160,7 @@ export async function submitTreeCheckin(
 
 export async function proposeNewTree(data: TreeCreateRequest): Promise<TreeResponse> {
   const config = getAppConfig();
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };

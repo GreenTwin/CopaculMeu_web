@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Server, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair, Sun, Moon } from 'lucide-react';
-import { AppConfig, DEFAULT_BACKEND_HOST, getAppConfig, saveAppConfig } from '../services/config';
+import { X, Server, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair, Sun, Moon, Lock } from 'lucide-react';
+import { AppConfig, DEFAULT_BACKEND_HOST, getAppConfig, saveAppConfig, isValidBackendUrl } from '../services/config';
 import { testBackendHost } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -37,7 +37,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const isDev = import.meta.env.DEV;
+
   const handleTestConnection = async () => {
+    if (isDev && !isValidBackendUrl(backendHost.trim())) {
+      setTestResult({ ok: false, message: t('settingsModal.invalidHostUrl') });
+      return;
+    }
     setTesting(true);
     setTestResult(null);
     const result = await testBackendHost(backendHost);
@@ -47,8 +53,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDev && !isValidBackendUrl(backendHost.trim())) {
+      setTestResult({ ok: false, message: t('settingsModal.invalidHostUrl') });
+      return;
+    }
     const newConfig: AppConfig = {
-      backendHost: backendHost.trim() || DEFAULT_BACKEND_HOST,
+      backendHost: isDev ? (backendHost.trim() || DEFAULT_BACKEND_HOST) : DEFAULT_BACKEND_HOST,
       locationMode,
     };
     saveAppConfig(newConfig);
@@ -198,13 +208,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Backend Host configuration */}
           <div className="form-group">
-            <label>{t('settingsModal.hostLabel')}</label>
+            <div className="host-label-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label style={{ margin: 0 }}>{t('settingsModal.hostLabel')}</label>
+              {!isDev && (
+                <span className="host-locked-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.74rem', color: '#059669', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                  <Lock size={12} />
+                  <span>{t('settingsModal.hostLockedProd')}</span>
+                </span>
+              )}
+            </div>
             <div className="host-input-row">
               <input
                 type="text"
                 required
+                disabled={!isDev}
                 placeholder={`Ex: ${DEFAULT_BACKEND_HOST}`}
-                value={backendHost}
+                value={isDev ? backendHost : DEFAULT_BACKEND_HOST}
                 onChange={(e) => setBackendHost(e.target.value)}
               />
               <button
@@ -218,7 +237,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
             <span className="form-help-text">
-              {t('settingsModal.hostHelpText')}
+              {!isDev ? t('settingsModal.hostLockedProd') : t('settingsModal.hostHelpText')}
             </span>
           </div>
 
