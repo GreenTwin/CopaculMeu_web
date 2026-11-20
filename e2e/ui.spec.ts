@@ -40,16 +40,30 @@ test('asks a guest to sign in before proposing a tree', async ({ page }) => {
   await expect(page.getByLabel('Full Name *')).toBeHidden();
 });
 
-test('demo mode loads curated trees and search filters them', async ({ page }) => {
+test('search filters trees returned by backend', async ({ page }) => {
+  await page.route('**/api/trees/area*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 1,
+          latitude: 45.75165,
+          longitude: 21.22080,
+          species: 'Quercus robur (Stejar)',
+          healthLevel: 'GOOD',
+          wateringLevel: 'OPTIMAL',
+          status: 'APPROVED',
+        },
+      ]),
+    });
+  });
   await useEnglish(page);
-  await treeCount(page).click();
-  await page.getByText('Demo Mode (Curated)', { exact: true }).click();
-  await page.getByRole('button', { name: 'Save & Apply' }).click();
 
-  await expect(treeCount(page)).not.toContainText('(0 trees)');
+  await expect(treeCount(page)).toContainText('(1 trees)');
 
   await page.getByPlaceholder(/Search species/).fill('stejar');
-  await expect(treeCount(page)).not.toContainText('(0 trees)');
+  await expect(treeCount(page)).toContainText('(1 trees)');
 
   await page.getByPlaceholder(/Search species/).fill('zzz-no-such-tree');
   await expect(treeCount(page)).toContainText('(0 trees)');

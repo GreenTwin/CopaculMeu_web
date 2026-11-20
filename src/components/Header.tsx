@@ -1,18 +1,20 @@
 import React from 'react';
-import { TreePine, Search, PlusCircle, Activity, Settings, Server, Lock, Globe, Sun, Moon } from 'lucide-react';
+import { TreePine, Search, PlusCircle, Settings, Lock, Sun, Moon, ShieldCheck } from 'lucide-react';
 import type { ApiStatus } from '../services/api';
 import { UserMenu } from './UserMenu';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { RomaniaFlag, GreatBritainFlag } from './Flags';
+import { navigateTo } from '../utils/navigation';
 
 interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  apiStatus: ApiStatus | null;
+  apiStatus?: ApiStatus | null;
   onOpenProposeModal: () => void;
   onOpenSettingsModal: () => void;
+  onOpenAdminModal?: () => void;
   totalVisibleTrees: number;
 }
 
@@ -22,10 +24,10 @@ export const Header: React.FC<HeaderProps> = ({
   apiStatus,
   onOpenProposeModal,
   onOpenSettingsModal,
+  onOpenAdminModal,
   totalVisibleTrees,
 }) => {
-  const isLive = apiStatus?.source === 'backend_live';
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
 
@@ -69,28 +71,8 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Actions and Status */}
+      {/* Actions */}
       <div className="header-actions">
-        {/* Clickable API Status Badge (opens Settings) */}
-        <button
-          type="button"
-          onClick={onOpenSettingsModal}
-          className={`api-status-badge ${
-            apiStatus?.connected ? 'connected' : 'offline'
-          } ${isLive ? 'mode-live' : 'mode-demo'}`}
-          title={`${apiStatus?.message || 'Configurare sursă date'} - Click pentru setări`}
-        >
-          {isLive ? (
-            <Server size={14} className="status-pulse" />
-          ) : (
-            <Activity size={14} className="status-pulse" />
-          )}
-          <span className="status-text">
-            {isLive ? `${t('header.liveMode')}: ${apiStatus?.host || 'Backend'}` : t('header.demoMode')}
-          </span>
-          <span className="tree-counter">{t('header.treeCount', { count: totalVisibleTrees })}</span>
-        </button>
-
         {/* Propose Tree CTA */}
         <button
           className={`propose-tree-btn ${!isAuthenticated ? 'auth-restricted' : ''}`}
@@ -106,8 +88,24 @@ export const Header: React.FC<HeaderProps> = ({
           {!isAuthenticated && <Lock size={12} className="btn-lock-badge" />}
         </button>
 
+        {/* Admin Quick Entry */}
+        {isAuthenticated && user?.role === 'ADMIN' && (
+          <button
+            type="button"
+            className="admin-header-pill-btn"
+            onClick={() => {
+              if (onOpenAdminModal) onOpenAdminModal();
+              else navigateTo('/admin/users');
+            }}
+            title={t('admin.openPanelTooltip')}
+          >
+            <ShieldCheck size={16} />
+            <span className="btn-label">{t('admin.headerBtn')}</span>
+          </button>
+        )}
+
         {/* User Account & Login Menu */}
-        <UserMenu />
+        <UserMenu onOpenAdminModal={onOpenAdminModal} />
 
         {/* Quick Language Toggle with SVG flags */}
         <div className="lang-toggle-pill" title={t('header.languageToggleTooltip')}>

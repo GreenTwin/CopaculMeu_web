@@ -6,9 +6,11 @@ import { TreeDrawer } from './features/tree-details/TreeDrawer';
 import { ProposeTreeModal } from './components/ProposeTreeModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AuthModal } from './components/AuthModal';
+import { AdminPage } from './pages/AdminPage';
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { useCurrentPath, navigateTo } from './utils/navigation';
 import {
   fetchTreesInArea,
   submitTreeCheckin,
@@ -16,10 +18,13 @@ import {
   ApiStatus,
 } from './services/api';
 import type { TreeResponse, BoundingBox, TreeCheckinRequest, TreeCreateRequest } from './types/tree';
-import { TIMISOARA_DEFAULT_CENTER } from './data/mockTrees';
+import { TIMISOARA_DEFAULT_CENTER } from './constants/map';
 import { getAppConfig, type AppConfig } from './services/config';
 
 export const App: React.FC = () => {
+  const currentPath = useCurrentPath();
+  const isAdminRoute = currentPath.startsWith('/admin');
+
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const [trees, setTrees] = useState<TreeResponse[]>([]);
   const [selectedTree, setSelectedTree] = useState<TreeResponse | null>(null);
@@ -50,7 +55,7 @@ export const App: React.FC = () => {
     }, 300);
   }, []);
 
-  // Reload data when config (Demo / Live host / Location mode) changes
+  // Reload data when config (Backend host / Location mode) changes
   const handleConfigChanged = useCallback(async (newConfig: AppConfig) => {
     setAppConfig(newConfig);
     if (currentBoundsRef.current) {
@@ -165,6 +170,27 @@ export const App: React.FC = () => {
     setSelectedTree(newTree);
   };
 
+  // Admin moderation handlers
+  const handleTreeApproved = (approvedTree: TreeResponse) => {
+    setTrees((prev) => {
+      const exists = prev.some((t) => t.id === approvedTree.id);
+      if (exists) {
+        return prev.map((t) => (t.id === approvedTree.id ? approvedTree : t));
+      }
+      return [approvedTree, ...prev];
+    });
+    if (selectedTree?.id === approvedTree.id) {
+      setSelectedTree(approvedTree);
+    }
+  };
+
+  const handleTreeRejected = (rejectedTree: TreeResponse) => {
+    setTrees((prev) => prev.filter((t) => t.id !== rejectedTree.id));
+    if (selectedTree?.id === rejectedTree.id) {
+      setSelectedTree(null);
+    }
+  };
+
   // Filter trees based on search query and drought alert toggle
   const filteredTrees = useMemo(() => {
     return trees.filter((tree) => {
@@ -190,6 +216,19 @@ export const App: React.FC = () => {
     });
   }, [trees, searchQuery, filterDroughtOnly]);
 
+  if (isAdminRoute) {
+    return (
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <AdminPage currentPath={currentPath} />
+            <AuthModal />
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <LanguageProvider>
@@ -202,6 +241,7 @@ export const App: React.FC = () => {
               apiStatus={apiStatus}
               onOpenProposeModal={() => setIsProposeOpen(true)}
               onOpenSettingsModal={() => setIsSettingsOpen(true)}
+              onOpenAdminModal={() => navigateTo('/admin/users')}
               totalVisibleTrees={filteredTrees.length}
             />
 
@@ -231,6 +271,7 @@ export const App: React.FC = () => {
               userLocation={userLocation}
               onSubmitCheckin={handleCheckinSubmit}
               onSimulateNearby={handleSimulateNearby}
+              onTreeStatusChanged={handleTreeApproved}
             />
 
             {/* Propose Tree Modal */}
@@ -241,7 +282,7 @@ export const App: React.FC = () => {
               onSubmit={handleProposeSubmit}
             />
 
-            {/* Settings Modal (Demo vs Live Backend & Host configuration) */}
+            {/* Settings Modal (Backend Host & Preferences) */}
             <SettingsModal
               isOpen={isSettingsOpen}
               onClose={() => setIsSettingsOpen(false)}

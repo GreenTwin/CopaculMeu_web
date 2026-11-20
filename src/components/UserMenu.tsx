@@ -2,8 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User as UserIcon, LogIn, LogOut, ShieldCheck, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { navigateTo } from '../utils/navigation';
 
-export const UserMenu: React.FC = () => {
+interface UserMenuProps {
+  onOpenAdminModal?: () => void;
+}
+
+export const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdminModal }) => {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -83,6 +88,24 @@ export const UserMenu: React.FC = () => {
           <div className="user-dropdown-divider" />
 
           <div className="user-dropdown-actions">
+            {user.role === 'ADMIN' && (
+              <>
+                <button
+                  type="button"
+                  className="user-admin-action-btn"
+                  onClick={() => {
+                    setIsOpen(false);
+                    if (onOpenAdminModal) onOpenAdminModal();
+                    else navigateTo('/admin/users');
+                  }}
+                >
+                  <ShieldCheck size={16} color="#059669" />
+                  <span>{t('admin.openPanelBtn')}</span>
+                </button>
+                <div className="user-dropdown-divider" />
+              </>
+            )}
+
             <button
               type="button"
               className="user-logout-action-btn"

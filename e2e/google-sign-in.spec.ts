@@ -61,17 +61,6 @@ test('shows the Google button on sign in and register', async ({ page }) => {
   await expect(page.getByText('or', { exact: true })).toBeVisible();
 });
 
-test('hides the Google button in demo mode', async ({ page }) => {
-  await useEnglish(page);
-  await page.getByRole('button', { name: /\(\d+ trees\)/ }).click();
-  await page.getByText('Demo Mode (Curated)', { exact: true }).click();
-  await page.getByRole('button', { name: 'Save & Apply' }).click();
-
-  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sign In to CopaculMeu' })).toBeVisible();
-  await expect(page.locator('.auth-google-button')).toHaveCount(0);
-  await expect(page.getByText('or', { exact: true })).toHaveCount(0);
-});
 
 test('shows an error when Google returns a token the API rejects', async ({ page }) => {
   await stubGoogleIdentity(page, forgedCredential);
