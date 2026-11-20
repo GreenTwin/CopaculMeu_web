@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { X, Server, Database, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair, Sun, Moon } from 'lucide-react';
+import { X, Server, Check, AlertCircle, RefreshCw, Globe, Navigation, Crosshair, Sun, Moon } from 'lucide-react';
 import { AppConfig, DEFAULT_BACKEND_HOST, getAppConfig, saveAppConfig } from '../services/config';
 import { testBackendHost } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { Language } from '../i18n/translations';
 import { RomaniaFlag, GreatBritainFlag } from './Flags';
 
 interface SettingsModalProps {
@@ -21,7 +20,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const currentConfig = getAppConfig();
-  const [mode, setMode] = useState<'demo' | 'live'>(currentConfig.mode);
   const [backendHost, setBackendHost] = useState(currentConfig.backendHost);
   const [locationMode, setLocationMode] = useState<'live' | 'manual'>(currentConfig.locationMode || 'live');
   const [testing, setTesting] = useState(false);
@@ -31,7 +29,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   React.useEffect(() => {
     if (isOpen) {
       const cfg = getAppConfig();
-      setMode(cfg.mode);
       setBackendHost(cfg.backendHost);
       setLocationMode(cfg.locationMode || 'live');
       setTestResult(null);
@@ -51,7 +48,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const newConfig: AppConfig = {
-      mode,
       backendHost: backendHost.trim() || DEFAULT_BACKEND_HOST,
       locationMode,
     };
@@ -151,46 +147,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 {theme === 'dark' && <Check size={16} className="theme-check" />}
               </button>
-            </div>
-          </div>
-
-          {/* Mode Selector */}
-          <div className="form-group">
-            <label>{t('settingsModal.appModeSectionTitle')}</label>
-            <div className="mode-selector-grid">
-              <label
-                className={`mode-option-card ${mode === 'demo' ? 'selected' : ''}`}
-                onClick={() => setMode('demo')}
-              >
-                <div className="mode-radio-header">
-                  <input
-                    type="radio"
-                    name="appMode"
-                    checked={mode === 'demo'}
-                    onChange={() => setMode('demo')}
-                  />
-                  <Database size={18} />
-                  <strong>{t('settingsModal.demoModeTitle')}</strong>
-                </div>
-                <p>{t('settingsModal.demoModeDesc')}</p>
-              </label>
-
-              <label
-                className={`mode-option-card ${mode === 'live' ? 'selected' : ''}`}
-                onClick={() => setMode('live')}
-              >
-                <div className="mode-radio-header">
-                  <input
-                    type="radio"
-                    name="appMode"
-                    checked={mode === 'live'}
-                    onChange={() => setMode('live')}
-                  />
-                  <Server size={18} />
-                  <strong>{t('settingsModal.liveModeTitle')}</strong>
-                </div>
-                <p>{t('settingsModal.liveModeDesc')}</p>
-              </label>
             </div>
           </div>
 

@@ -3,8 +3,6 @@
 interface ImportMetaEnv {
   /** Backend base URL, e.g. https://your-app.up.railway.app (no trailing slash needed) */
   readonly VITE_BACKEND_HOST?: string;
-  /** 'live' (default) or 'demo' */
-  readonly VITE_DEFAULT_MODE?: 'live' | 'demo';
   /** Public Google web client id */
   readonly VITE_GOOGLE_CLIENT_ID?: string;
 }

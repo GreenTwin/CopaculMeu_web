@@ -328,9 +328,8 @@ To support community tree guardianship, check-ins, and verified proposals:
    * Stores access tokens in `localStorage.getItem('token')`, automatically attached to backend API headers (`Authorization: Bearer <token>`).
    * Validates stored sessions on app mount via `GET /api/auth/me`. Expired or revoked tokens automatically clear the session.
    * Invalidates token server-side upon logout via `POST /api/auth/logout`.
-2. **Dual-Mode Operation:**
-   * **Live Mode:** Dispatches requests to the configured Spring Boot backend endpoints (`/api/auth/login`, `/api/users/register`, `/api/auth/me`, `/api/auth/logout`).
-   * **Demo Mode:** Simulates immediate, local authentication and registration with mock volunteer profiles without requiring backend connectivity.
+2. **Live Backend Operation:**
+   * Dispatches requests directly to the configured Spring Boot backend endpoints (`/api/auth/login`, `/api/users/register`, `/api/auth/me`, `/api/auth/logout`).
 3. **Authentication & Email Confirmation Modal (`AuthModal.tsx`):**
    * Multi-view flow covering **Autentificare**, **Înregistrare**, and **Confirmare Email**.
    * Form validation with interactive password visibility toggles (`Eye`/`EyeOff`), minimum 8-character requirements, and matching password confirmations.
@@ -340,7 +339,6 @@ To support community tree guardianship, check-ins, and verified proposals:
      * 6-cell numeric PIN code verification input with auto-advance, backspace navigation, and clipboard paste support.
      * Resend code button with 60-second cooldown timer.
      * Instant visual celebration screen (`CheckCircle2`) and automatic session login upon code validation.
-   * Features a 1-click *"Autentificare rapidă cu profil voluntar demo"* button for instant review and testing.
 4. **Header User Menu (`UserMenu.tsx`):**
    * Non-authenticated state: Prominent, clean *"Autentificare"* CTA in the header.
    * Authenticated state: Personalized avatar badge with volunteer initials (e.g. `MP`), first name, admin role indicator, and a floating dropdown menu for account overview and instant logout.
@@ -511,6 +509,44 @@ Pentru a garanta calitatea datelor și prevenirea abuzurilor în monitorizarea e
 
 ---
 
-## 11. Summary & Next Steps
+## 11. Administrator Operations & Administrative Endpoints (`/api/admin/...`)
+
+Pentru gestionarea conținutului platformei, a voluntarilor și a comunicării tranzacționale, utilizatorii cu rolul `ADMIN` au acces la panoul dedicat de administrare (`AdminModal.tsx`) și la operațiunile de moderare inline din `TreeDrawer.tsx`.
+
+### 11.1 Specificația Endpoint-urilor Administrative
+
+Conform specificației OpenAPI backend (`/v3/api-docs`), toate operațiunile administrative sunt grupate sub prefixul `/api/admin/...` și necesită autentificare JWT (`Authorization: Bearer <token>`) cu rolul `ADMIN`:
+
+| Metodă | Endpoint | DTO Request | DTO Răspuns | Descriere |
+|---|---|---|---|---|
+| `GET` | `/api/admin/trees/proposals` | - | `TreeResponse[]` | Returnează propunerile de arbori în așteptare (`status = PROPOSED`). |
+| `POST` | `/api/admin/trees/{id}/approve` | - | `TreeResponse` | Aprobă propunerea și publică arborele pe hartă (`status = APPROVED`). |
+| `POST` | `/api/admin/trees/{id}/reject` | `TreeRejectRequest` (`{ reason: string }`) | `TreeResponse` | Respinge propunerea de arbore cu motiv specificat. |
+| `POST` | `/api/admin/trees` | `TreeCreateRequest` | `TreeResponse` | Înregistrează direct un arbore în catalog ca administrator. |
+| `POST` | `/api/admin/species` | `TreeSpeciesCreateRequest` (`{ name, scientificName, commonName, aliases }`) | `SpeciesResponse` | Adaugă o nouă specie în catalogul botanic și invalidează cache-ul local. |
+| `GET` | `/api/admin/users` | Query: `page`, `size`, `status`, `role` | `UserPageResponse` | Listă paginată a utilizatorilor înregistrați cu opțiuni de filtrare și căutare. |
+| `PUT` | `/api/admin/users/{id}/approve` | - | `User` | Aprobă manual un cont de utilizator neconfirmat (`status = ACTIVE`). |
+| `PUT` | `/api/admin/users/{id}/status` | Query / Body: `status` | `User` | Modifică starea unui cont de utilizator (`ACTIVE`, `UNCONFIRMED`, `SUSPENDED`). |
+| `GET` | `/api/admin/email-templates` | - | `EmailTemplateResponse[]` | Returnează toate șabloanele de e-mail de sistem. |
+| `GET` | `/api/admin/email-templates/{idOrName}` | - | `EmailTemplateResponse` | Returnează detaliile unui șablon după ID sau nume tehnic. |
+| `PUT` | `/api/admin/email-templates/{idOrName}` | `EmailTemplateUpdateRequest` (`{ subject, body, description }`) | `EmailTemplateResponse` | Actualizează conținutul și subiectul unui șablon de e-mail. |
+
+### 11.2 Arhitectura Frontend & Componente Administrative
+
+1. **`src/services/admin.ts`:**
+   - Client HTTP tipizat ce implementează toate rutele `/api/admin/...`.
+   - Include interceptare automată a token-ului JWT din `localStorage` și invalidare reactivă a cache-ului botanic (`clearSpeciesCache()`).
+2. **Panoul de Administrare (`src/components/AdminModal.tsx`):**
+   - Disponibil exclusiv pentru utilizatorii autentificați cu `role: 'ADMIN'` via butonul dedicat din `Header` și elementul din `UserMenu`.
+   - **Tab 1: Management Utilizatori & Status (`Users`):** Vizualizare paged și căutare în timp real a utilizatorilor, filtrare după rol (`USER`, `ADMIN`) și stare (`ACTIVE`, `UNCONFIRMED`, `SUSPENDED`), acțiune directă de aprobare cont (`approveUser`) și selector interactiv pentru schimbarea stării contului (Activare, Suspendare, Resetare Neconfirmat).
+   - **Tab 2: Propuneri Arbori (`Tree Proposals`):** Listă interactivă a arborilor propuși de cetățeni, cu vizualizare detalii botanice, acțiune directă de aprobare și dialog inline de respingere cu motivare.
+   - **Tab 3: Catalog Specii (`Species Catalog`):** Formular pentru adăugarea de noi specii botanice în catalogul oficial al municipiului Timișoara.
+   - **Tab 4: Șabloane Email (`Email Templates`):** Editor live de șabloane tranzacționale (activare cont, aprobare arbore, etc.) cu previzualizare variabile și salvare în backend.
+3. **Moderare Directă în Hartă (`TreeDrawer.tsx`):**
+   - Când un administrator selectează un arbore cu `status = 'PROPOSED'`, în panoul de detalii apare un card dedicat de moderare (`.admin-moderation-card`) permițând aprobarea sau respingerea directă pe teren fără a deschide panoul central.
+
+---
+
+## 12. Summary & Next Steps
 
 This technical documentation provides a clear, comprehensive blueprint for building the **CopaculMeu** frontend using only open technologies, centered on Timișoara, with a responsive, modern glassmorphic interface and high-performance clustering.

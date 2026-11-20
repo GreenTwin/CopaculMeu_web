@@ -29,120 +29,68 @@ export function clearSession(): void {
 }
 
 /**
- * User login against backend or demo fallback
+ * User login against backend server
  */
 export async function loginUser(credentials: LoginRequest): Promise<AuthResponse> {
   const config = getAppConfig();
 
-  if (config.mode === 'live') {
-    const res = await fetch(`${config.backendHost}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
+  const res = await fetch(`${config.backendHost}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
 
-    if (!res.ok) {
-      if (res.status === 401) {
-        throw new Error('Email sau parolă incorectă.');
-      }
-      const errText = await res.text();
-      let msg = 'Eroare la autentificare.';
-      try {
-        const json = JSON.parse(errText);
-        msg = json.message || msg;
-      } catch {
-        // use default msg
-      }
-      throw new Error(msg);
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Email sau parolă incorectă.');
     }
-
-    const authData: AuthResponse = await res.json();
-    setSession(authData);
-    return authData;
+    const errText = await res.text();
+    let msg = 'Eroare la autentificare.';
+    try {
+      const json = JSON.parse(errText);
+      msg = json.message || msg;
+    } catch {
+      // use default msg
+    }
+    throw new Error(msg);
   }
 
-  // --- DEMO MODE AUTHENTICATION ---
-  await new Promise((resolve) => setTimeout(resolve, 350)); // simulate network delay
-
-  if (!credentials.email || !credentials.password) {
-    throw new Error('Te rugăm să completezi emailul și parola.');
-  }
-
-  const demoUser: User = {
-    id: 'demo-usr-' + Date.now(),
-    email: credentials.email,
-    name: credentials.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Voluntar Demo',
-    role: credentials.email.includes('admin') ? 'ADMIN' : 'USER',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  const demoAuth: AuthResponse = {
-    accessToken: 'demo-jwt-token-' + Date.now(),
-    tokenType: 'Bearer',
-    expiresIn: 86400,
-    user: demoUser,
-  };
-
-  setSession(demoAuth);
-  return demoAuth;
+  const authData: AuthResponse = await res.json();
+  setSession(authData);
+  return authData;
 }
 
 /**
- * User registration against backend or demo fallback
+ * User registration against backend server
  */
 export async function registerUser(data: RegisterRequest): Promise<User> {
   const config = getAppConfig();
 
-  if (config.mode === 'live') {
-    const res = await fetch(`${config.backendHost}/api/users/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+  const res = await fetch(`${config.backendHost}/api/users/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      let msg = 'Eroare la înregistrare.';
-      try {
-        const json = JSON.parse(errText);
-        msg = json.message || msg;
-      } catch {
-        if (res.status === 400) {
-          msg = 'Adresa de email este deja utilizată sau datele sunt invalide.';
-        }
+  if (!res.ok) {
+    const errText = await res.text();
+    let msg = 'Eroare la înregistrare.';
+    try {
+      const json = JSON.parse(errText);
+      msg = json.message || msg;
+    } catch {
+      if (res.status === 400) {
+        msg = 'Adresa de email este deja utilizată sau datele sunt invalide.';
       }
-      throw new Error(msg);
     }
-
-    return await res.json();
+    throw new Error(msg);
   }
 
-  // --- DEMO MODE REGISTRATION ---
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
-  if (!data.email || !data.password || !data.name) {
-    throw new Error('Te rugăm să completezi toate câmpurile obligatorii.');
-  }
-
-  if (data.password.length < 8) {
-    throw new Error('Parola trebuie să aibă minim 8 caractere.');
-  }
-
-  return {
-    id: 'demo-reg-' + Date.now(),
-    email: data.email,
-    name: data.name,
-    role: 'USER',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  return await res.json();
 }
 
 /**
@@ -154,33 +102,31 @@ export async function fetchCurrentUser(): Promise<User | null> {
 
   const config = getAppConfig();
 
-  if (config.mode === 'live') {
-    try {
-      const res = await fetch(`${config.backendHost}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  try {
+    const res = await fetch(`${config.backendHost}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      if (res.ok) {
-        const user: User = await res.json();
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-        return user;
-      } else if (res.status === 401) {
-        // Token expired or invalid
-        clearSession();
-        return null;
-      }
-    } catch (err) {
-      console.warn('Could not verify session with backend:', err);
+    if (res.ok) {
+      const user: User = await res.json();
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      return user;
+    } else if (res.status === 401) {
+      // Token expired or invalid
+      clearSession();
+      return null;
     }
+  } catch (err) {
+    console.warn('Could not verify session with backend:', err);
   }
 
   return getStoredUser();
 }
 
 /**
- * User logout
+ * Google social sign-in against backend server
  */
 export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
   const config = getAppConfig();
@@ -251,7 +197,7 @@ export async function logoutUser(): Promise<void> {
   const token = getStoredToken();
   const config = getAppConfig();
 
-  if (config.mode === 'live' && token) {
+  if (token) {
     try {
       await fetch(`${config.backendHost}/api/auth/logout`, {
         method: 'POST',
@@ -268,51 +214,66 @@ export async function logoutUser(): Promise<void> {
 }
 
 /**
- * Confirm user email with 6-digit activation code
+ * Confirm user email with 6-digit activation code via backend server
+ * POST /api/users/activate (with fallback to /api/auth/activate)
  */
 export async function confirmEmailCode(email: string, code: string): Promise<void> {
   const config = getAppConfig();
 
-  if (config.mode === 'live') {
-    try {
-      const res = await fetch(`${config.backendHost}/api/users/confirm-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      });
-      if (res.ok) return;
-    } catch {
-      // Graceful fallback
-    }
+  let res = await fetch(`${config.backendHost}/api/users/activate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+  });
+
+  if (!res.ok && res.status === 404) {
+    res = await fetch(`${config.backendHost}/api/auth/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+    });
   }
 
-  // Simulate network verification
-  await new Promise((resolve) => setTimeout(resolve, 450));
-
-  if (!code || code.trim().length !== 6) {
-    throw new Error('Codul de activare trebuie să aibă exact 6 cifre.');
+  if (!res.ok) {
+    let msg = 'Cod de activare invalid sau expirat.';
+    try {
+      const json = await res.json();
+      msg = json.message || json.error || msg;
+    } catch {
+      // keep default
+    }
+    throw new Error(msg);
   }
 }
 
 /**
- * Resend activation code to user's email
+ * Resend activation code to user's email via backend server
  */
 export async function resendActivationCode(email: string): Promise<void> {
   const config = getAppConfig();
 
-  if (config.mode === 'live') {
-    try {
-      await fetch(`${config.backendHost}/api/users/resend-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      return;
-    } catch {
-      // Graceful fallback
-    }
+  let res = await fetch(`${config.backendHost}/api/users/resend-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim() }),
+  });
+
+  if (!res.ok && (res.status === 404 || res.status === 405)) {
+    res = await fetch(`${config.backendHost}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    });
   }
 
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  if (!res.ok) {
+    let msg = 'Nu s-a putut retrimite codul de verificare.';
+    try {
+      const json = await res.json();
+      msg = json.message || json.error || msg;
+    } catch {
+      // keep default
+    }
+    throw new Error(msg);
+  }
 }

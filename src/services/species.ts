@@ -13,25 +13,6 @@ interface CachedSpeciesPayload {
 let memoryCache: CachedSpeciesPayload | null = null;
 let inflightPromise: Promise<SpeciesResponse[]> | null = null;
 
-// Curated fallback in case network / backend is initially unavailable
-export const FALLBACK_SPECIES: SpeciesResponse[] = [
-  { id: 1, name: 'Platanus x acerifolia (Platan)', scientificName: 'Platanus x acerifolia', commonName: 'Platan' },
-  { id: 2, name: 'Tilia cordata (Tei pucios)', scientificName: 'Tilia cordata', commonName: 'Tei pucios' },
-  { id: 3, name: 'Tilia tomentosa (Tei argintiu)', scientificName: 'Tilia tomentosa', commonName: 'Tei argintiu' },
-  { id: 4, name: 'Quercus robur (Stejar pedunculat)', scientificName: 'Quercus robur', commonName: 'Stejar pedunculat' },
-  { id: 5, name: 'Quercus rubra (Stejar roșu american)', scientificName: 'Quercus rubra', commonName: 'Stejar roșu american' },
-  { id: 6, name: 'Acer pseudoplatanus (Paltin de munte)', scientificName: 'Acer pseudoplatanus', commonName: 'Paltin de munte' },
-  { id: 7, name: 'Acer platanoides (Paltin de câmp)', scientificName: 'Acer platanoides', commonName: 'Paltin de câmp' },
-  { id: 8, name: 'Acer campestre (Jugastru)', scientificName: 'Acer campestre', commonName: 'Jugastru' },
-  { id: 9, name: 'Betula pendula (Mesteacăn)', scientificName: 'Betula pendula', commonName: 'Mesteacăn' },
-  { id: 10, name: 'Ginkgo biloba (Ginkgo)', scientificName: 'Ginkgo biloba', commonName: 'Ginkgo' },
-  { id: 11, name: 'Aesculus hippocastanum (Castan sălbatic)', scientificName: 'Aesculus hippocastanum', commonName: 'Castan sălbatic' },
-  { id: 12, name: 'Salix babylonica (Salcie plângătoare)', scientificName: 'Salix babylonica', commonName: 'Salcie plângătoare' },
-  { id: 13, name: 'Fraxinus excelsior (Frasin comun)', scientificName: 'Fraxinus excelsior', commonName: 'Frasin comun' },
-  { id: 14, name: 'Robinia pseudoacacia (Salcâm)', scientificName: 'Robinia pseudoacacia', commonName: 'Salcâm' },
-  { id: 15, name: 'Magnolia x soulangeana (Magnolie)', scientificName: 'Magnolia x soulangeana', commonName: 'Magnolie' },
-];
-
 /**
  * Reads valid cached species from memory or localStorage if not older than 30 minutes.
  */
@@ -86,20 +67,20 @@ function saveSpeciesToCache(species: SpeciesResponse[]): void {
 }
 
 /**
- * Fetches the available tree species.
- * Guarantees that results are cached for at least 30 minutes:
- * - If cache exists and is fresh (< 30 minutes), zero network requests are made.
- * - In-flight requests are de-duplicated so simultaneous calls make at most 1 request.
+ * Fetches the available tree species from the backend server.
+ * Guarantees that results are cached for at least 30 minutes, unless forceRefresh is true.
  */
-export async function fetchAvailableSpecies(): Promise<SpeciesResponse[]> {
-  // 1. Return immediately if fresh cache exists
-  const cached = getValidCachedSpecies();
-  if (cached) {
-    return cached;
+export async function fetchAvailableSpecies(forceRefresh = false): Promise<SpeciesResponse[]> {
+  // 1. Return immediately if fresh cache exists and forceRefresh is not requested
+  if (!forceRefresh) {
+    const cached = getValidCachedSpecies();
+    if (cached) {
+      return cached;
+    }
   }
 
   // 2. If a request is already in-flight, return the existing promise
-  if (inflightPromise) {
+  if (inflightPromise && !forceRefresh) {
     return inflightPromise;
   }
 
@@ -140,8 +121,7 @@ export async function fetchAvailableSpecies(): Promise<SpeciesResponse[]> {
         // Ignore JSON error
       }
 
-      // Final fallback to curated Timișoara species
-      return FALLBACK_SPECIES;
+      return [];
     } finally {
       inflightPromise = null;
     }
