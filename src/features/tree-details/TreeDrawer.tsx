@@ -16,6 +16,8 @@ import {
   LogIn,
   CheckCircle2,
   Clock,
+  ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -24,6 +26,7 @@ import {
   recordUserTreeCheckin,
 } from '../../services/checkinLimit';
 import { fetchTreeCheckins } from '../../services/api';
+import { approveTreeProposal, rejectTreeProposal } from '../../services/admin';
 
 interface TreeDrawerProps {
   tree: TreeResponse | null;
@@ -31,6 +34,7 @@ interface TreeDrawerProps {
   userLocation: { lat: number; lng: number } | null;
   onSubmitCheckin: (treeId: number, data: TreeCheckinRequest) => Promise<void>;
   onSimulateNearby: (tree: TreeResponse) => void;
+  onTreeStatusChanged?: (tree: TreeResponse) => void;
 }
 
 const HEALTH_COLORS: Record<HealthLevel, { color: string; bg: string }> = {
@@ -56,6 +60,7 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
   userLocation,
   onSubmitCheckin,
   onSimulateNearby,
+  onTreeStatusChanged,
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const { language, t } = useLanguage();
@@ -68,6 +73,40 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [cooldownTick, setCooldownTick] = useState(0);
+  const [isAdminActioning, setIsAdminActioning] = useState(false);
+  const [adminActionFeedback, setAdminActionFeedback] = useState<string | null>(null);
+
+  const handleAdminApproveTree = async () => {
+    if (!tree) return;
+    setIsAdminActioning(true);
+    setAdminActionFeedback(null);
+    try {
+      const approved = await approveTreeProposal(tree.id);
+      onTreeStatusChanged?.(approved);
+      setAdminActionFeedback(t('admin.approvedSuccess'));
+    } catch (err: unknown) {
+      setAdminActionFeedback(err instanceof Error ? err.message : 'Error approving tree');
+    } finally {
+      setIsAdminActioning(false);
+    }
+  };
+
+  const handleAdminRejectTree = async () => {
+    if (!tree) return;
+    const reason = window.prompt(t('admin.rejectReasonPrompt')) || 'Neconformitate standarde';
+    if (!reason) return;
+    setIsAdminActioning(true);
+    setAdminActionFeedback(null);
+    try {
+      const rejected = await rejectTreeProposal(tree.id, reason);
+      onTreeStatusChanged?.(rejected);
+      setAdminActionFeedback(t('admin.rejectedSuccess'));
+    } catch (err: unknown) {
+      setAdminActionFeedback(err instanceof Error ? err.message : 'Error rejecting tree');
+    } finally {
+      setIsAdminActioning(false);
+    }
+  };
 
   const handleCloseCheckinModal = () => {
     setIsCheckinOpen(false);
@@ -144,9 +183,21 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
     setIsSubmitting(true);
     setFeedbackMsg(null);
 
-    // Fallback coordinates if user geolocation not permitted yet
-    const lat = userLocation ? userLocation.lat : tree.latitude;
-    const lng = userLocation ? userLocation.lng : tree.longitude;
+    // Security & Integrity check: strictly require genuine device GPS proximity
+    if (!userLocation) {
+      setFeedbackMsg(t('treeDrawer.proximityNoGps'));
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!isWithinProximity) {
+      setFeedbackMsg(t('treeDrawer.proximitySubOutOfRange'));
+      setIsSubmitting(false);
+      return;
+    }
+
+    const lat = userLocation.lat;
+    const lng = userLocation.lng;
 
     try {
       await onSubmitCheckin(tree.id, {
@@ -195,6 +246,12 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
         <div className="drawer-body">
           {/* Status Badges */}
           <div className="status-badges-row">
+            {tree.status === 'PENDING_APPROVAL' && (
+              <div className="status-badge" style={{ backgroundColor: '#fffbeb', color: '#b45309', borderColor: '#fde68a' }}>
+                <Clock size={15} />
+                <span>{t('admin.statusPending')}</span>
+              </div>
+            )}
             <div className="status-badge" style={{ backgroundColor: healthColor.bg, color: healthColor.color, borderColor: healthColor.color }}>
               <HeartPulse size={15} />
               <span>{t('treeDrawer.healthLabel')} <strong>{t('healthLevels.short_' + tree.healthLevel)}</strong></span>
@@ -204,6 +261,40 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
               <span>{t('treeDrawer.moistureLabel')} <strong>{t('wateringLevels.short_' + tree.wateringLevel)}</strong></span>
             </div>
           </div>
+
+          {/* Admin Moderation Banner */}
+          {user?.role === 'ADMIN' && tree.status === 'PENDING_APPROVAL' && (
+            <div className="admin-moderation-card">
+              <div className="admin-moderation-header">
+                <ShieldCheck size={16} color="#059669" />
+                <strong>{t('admin.moderationCardTitle')}</strong>
+              </div>
+              <p>{t('admin.moderationCardDesc')}</p>
+              {adminActionFeedback && (
+                <div className="admin-inline-feedback">{adminActionFeedback}</div>
+              )}
+              <div className="admin-moderation-actions">
+                <button
+                  type="button"
+                  className="admin-approve-btn"
+                  disabled={isAdminActioning}
+                  onClick={handleAdminApproveTree}
+                >
+                  <CheckCircle2 size={16} />
+                  <span>{t('admin.approveBtn')}</span>
+                </button>
+                <button
+                  type="button"
+                  className="admin-reject-btn"
+                  disabled={isAdminActioning}
+                  onClick={handleAdminRejectTree}
+                >
+                  <XCircle size={16} />
+                  <span>{t('admin.rejectBtn')}</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Critical Drought Alert Box */}
           {tree.wateringLevel === 'CRITICAL_DROUGHT' && (
@@ -291,7 +382,7 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
               </div>
             </div>
 
-            {!isWithinProximity && (
+            {import.meta.env.DEV && !isWithinProximity && (
               <button
                 type="button"
                 className="simulate-gps-btn"
@@ -349,6 +440,22 @@ export const TreeDrawer: React.FC<TreeDrawerProps> = ({
               >
                 <Check size={18} />
                 <span>{t('treeDrawer.cooldownDisabledBtn')}</span>
+              </button>
+            </div>
+          ) : !isWithinProximity ? (
+            <div className="checkin-proximity-guard">
+              <button
+                type="button"
+                className="primary-action-btn checkin-disabled-btn"
+                disabled
+                title={userLocation ? t('treeDrawer.proximitySubOutOfRange') : t('treeDrawer.proximityNoGps')}
+              >
+                <Navigation size={18} />
+                <span>
+                  {userLocation
+                    ? t('treeDrawer.proximityDistance', { distance: formatDistance(distanceMeters || 0) })
+                    : t('treeDrawer.proximityNoGps')}
+                </span>
               </button>
             </div>
           ) : (

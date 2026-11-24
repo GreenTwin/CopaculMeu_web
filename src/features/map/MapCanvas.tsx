@@ -6,7 +6,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import '@maplibre/maplibre-gl-leaflet';
 import Supercluster from 'supercluster';
 import type { TreeResponse, BoundingBox } from '../../types/tree';
-import { TIMISOARA_DEFAULT_CENTER } from '../../data/mockTrees';
+import { TIMISOARA_DEFAULT_CENTER } from '../../constants/map';
 import { openMapTilesTerrainStyle } from '../../styles/openMapTilesTerrainStyle';
 import { darkMatterStyle } from '../../styles/darkMatterStyle';
 import { useTheme } from '../../context/ThemeContext';

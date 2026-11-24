@@ -11,7 +11,6 @@ import {
   UserPlus,
   AlertCircle,
   Loader2,
-  Sparkles,
   MailCheck,
   CheckCircle2,
   ArrowLeft,
@@ -20,7 +19,6 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { confirmEmailCode, issueSocialNonce, loadGoogleIdentityScript, resendActivationCode } from '../services/auth';
-import { getAppConfig } from '../services/config';
 
 export const AuthModal: React.FC = () => {
   const { t } = useLanguage();
@@ -59,7 +57,7 @@ export const AuthModal: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const showGoogle = getAppConfig().mode === 'live' && Boolean(googleClientId);
+  const showGoogle = Boolean(googleClientId);
   const signInWithGoogleRef = useRef(signInWithGoogle);
   signInWithGoogleRef.current = signInWithGoogle;
 
@@ -331,25 +329,6 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  // Quick helper for demo volunteer login
-  const handleQuickDemoLogin = async () => {
-    setEmail('voluntar.timisoara@copaculmeu.ro');
-    setPassword('DemoParola123!');
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    try {
-      await login({
-        email: 'voluntar.timisoara@copaculmeu.ro',
-        password: 'DemoParola123!',
-      });
-      resetForm();
-    } catch {
-      setErrorMessage(t('authModal.demoLoginFailed'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="modal-backdrop" onClick={closeAuthModal}>
       <div className="modal-card auth-modal" onClick={(e) => e.stopPropagation()}>
@@ -518,7 +497,7 @@ export const AuthModal: React.FC = () => {
               </button>
             </form>
 
-            {/* Footer switch & demo helper */}
+            {/* Footer switch */}
             <div className="auth-modal-footer">
               {isLogin ? (
                 <p className="auth-switch-text">
@@ -542,21 +521,6 @@ export const AuthModal: React.FC = () => {
                     {t('authModal.signInLink')}
                   </button>
                 </p>
-              )}
-
-              {isLogin && (
-                <div className="auth-quick-demo-box">
-                  <button
-                    type="button"
-                    className="quick-demo-btn"
-                    onClick={handleQuickDemoLogin}
-                    disabled={isSubmitting}
-                    title={t('authModal.demoVolunteerTooltip')}
-                  >
-                    <Sparkles size={14} color="#059669" />
-                    <span>{t('authModal.quickDemoBtn')}</span>
-                  </button>
-                </div>
               )}
             </div>
           </>
@@ -698,10 +662,6 @@ export const AuthModal: React.FC = () => {
                       <span>{t('authModal.resendCodeBtn')}</span>
                     </button>
                   )}
-                </div>
-
-                <div className="auth-test-hint">
-                  {t('authModal.testHint')}
                 </div>
               </>
             )}
