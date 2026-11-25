@@ -77,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           className={`propose-tree-btn ${!isAuthenticated ? 'auth-restricted' : ''}`}
           onClick={handleProposeClick}
+          aria-label={t('header.proposeTreeBtn')}
           title={
             isAuthenticated
               ? t('header.proposeTreeTooltip')
@@ -107,7 +108,6 @@ export const Header: React.FC<HeaderProps> = ({
         {/* User Account & Login Menu */}
         <UserMenu onOpenAdminModal={onOpenAdminModal} />
 
-        {/* Quick Language Toggle with SVG flags */}
         <div className="lang-toggle-pill" title={t('header.languageToggleTooltip')}>
           <button
             type="button"

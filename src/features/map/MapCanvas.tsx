@@ -6,10 +6,12 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import '@maplibre/maplibre-gl-leaflet';
 import Supercluster from 'supercluster';
 import type { TreeResponse, BoundingBox } from '../../types/tree';
-import { TIMISOARA_DEFAULT_CENTER } from '../../constants/map';
+import { MAP_ZOOM_CONTROL_POSITION, TIMISOARA_DEFAULT_CENTER } from '../../constants/map';
 import { openMapTilesTerrainStyle } from '../../styles/openMapTilesTerrainStyle';
 import { darkMatterStyle } from '../../styles/darkMatterStyle';
 import { useTheme } from '../../context/ThemeContext';
+import { usePhoneLayout } from '../../hooks/usePhoneLayout';
+import { PHONE_LAYOUT_MAX_WIDTH, showsMapZoomControl } from '../../utils/viewport';
 
 // Register MapLibre Web Worker for Vite background vector tile processing
 setWorkerUrl(workerUrl);
@@ -32,6 +34,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   flyToCoords,
 }) => {
   const { theme } = useTheme();
+  const isPhone = usePhoneLayout();
+  const showZoom = showsMapZoomControl(isPhone ? PHONE_LAYOUT_MAX_WIDTH : PHONE_LAYOUT_MAX_WIDTH + 1);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.Layer | null>(null);
@@ -50,10 +54,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       minZoom: 11,
       maxZoom: 19,
       zoomControl: false,
+      touchZoom: true,
     });
 
-    // Zoom control at top-right
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.control.zoom({ position: MAP_ZOOM_CONTROL_POSITION }).addTo(map);
 
     // Initial GL style based on current theme
     const activeStyle = currentThemeRef.current === 'dark' ? darkMatterStyle : openMapTilesTerrainStyle;
@@ -280,7 +284,11 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+      <div
+        ref={mapContainerRef}
+        className={showZoom ? undefined : 'map-zoom-hidden'}
+        style={{ width: '100%', height: '100%' }}
+      />
     </div>
   );
 };

@@ -1,6 +1,80 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Crosshair, Droplets, Info, Layers } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+
+interface MapActionProps {
+  onLocateUser: () => void;
+  isLocating: boolean;
+  filterDroughtOnly: boolean;
+  onToggleDroughtFilter: () => void;
+  isLiveTracking?: boolean;
+  isLegendOpen: boolean;
+  onToggleLegend: () => void;
+  layout: 'hud' | 'menu';
+}
+
+export const MapActionButtons: React.FC<MapActionProps> = ({
+  onLocateUser,
+  isLocating,
+  filterDroughtOnly,
+  onToggleDroughtFilter,
+  isLiveTracking = false,
+  isLegendOpen,
+  onToggleLegend,
+  layout,
+}) => {
+  const { t } = useLanguage();
+  const inMenu = layout === 'menu';
+  const itemClass = inMenu ? 'mobile-menu-item' : 'hud-btn';
+  const iconSize = inMenu ? 20 : 18;
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`${itemClass} ${!inMenu && filterDroughtOnly ? 'active-filter' : ''}`}
+        onClick={onToggleDroughtFilter}
+        aria-pressed={filterDroughtOnly}
+        title={t('mapControls.droughtFilterTooltip')}
+      >
+        <Droplets size={iconSize} />
+        <span className={inMenu ? 'mobile-menu-text' : 'hud-label'}>
+          {inMenu || !filterDroughtOnly ? t('mapControls.droughtFilterOff') : t('mapControls.droughtFilterOn')}
+        </span>
+        {inMenu && (
+          <span className={`mobile-menu-switch ${filterDroughtOnly ? 'is-on' : ''}`} aria-hidden="true" />
+        )}
+      </button>
+
+      <button
+        type="button"
+        className={`${itemClass} ${!inMenu && isLiveTracking ? 'live-gps-active' : ''} ${isLocating ? 'loading' : ''}`}
+        onClick={onLocateUser}
+        title={isLiveTracking ? t('mapControls.locateTooltipLive') : t('mapControls.locateTooltip')}
+      >
+        {!inMenu && isLiveTracking && <span className="hud-live-indicator" />}
+        <Crosshair size={iconSize} />
+        <span className={inMenu ? 'mobile-menu-text' : 'hud-label'}>
+          {isLocating
+            ? t('mapControls.locating')
+            : isLiveTracking
+            ? t('mapControls.locateMeLive')
+            : t('mapControls.locateMe')}
+        </span>
+      </button>
+
+      <button
+        type="button"
+        className={`${itemClass} ${!inMenu && isLegendOpen ? 'active' : ''}`}
+        onClick={onToggleLegend}
+        title={t('mapControls.legendTooltip')}
+      >
+        <Layers size={iconSize} />
+        <span className={inMenu ? 'mobile-menu-text' : 'hud-label'}>{t('mapControls.legendBtn')}</span>
+      </button>
+    </>
+  );
+};
 
 interface MapControlsProps {
   onLocateUser: () => void;
@@ -8,68 +82,38 @@ interface MapControlsProps {
   filterDroughtOnly: boolean;
   onToggleDroughtFilter: () => void;
   isLiveTracking?: boolean;
+  showHud: boolean;
+  isLegendOpen: boolean;
+  onToggleLegend: () => void;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
-  onLocateUser,
-  isLocating,
-  filterDroughtOnly,
-  onToggleDroughtFilter,
-  isLiveTracking = false,
+  showHud,
+  isLegendOpen,
+  onToggleLegend,
+  ...actions
 }) => {
   const { t } = useLanguage();
-  const [isLegendOpen, setIsLegendOpen] = useState(false);
 
   return (
     <>
-      {/* Floating HUD on the bottom-left */}
-      <div className="floating-hud">
-        {/* Quick Filter: Drought Alert */}
-        <button
-          className={`hud-btn ${filterDroughtOnly ? 'active-filter' : ''}`}
-          onClick={onToggleDroughtFilter}
-          title={t('mapControls.droughtFilterTooltip')}
-        >
-          <Droplets size={18} />
-          <span className="hud-label">
-            {filterDroughtOnly ? t('mapControls.droughtFilterOn') : t('mapControls.droughtFilterOff')}
-          </span>
-        </button>
-
-        {/* Locate Me / Center on user */}
-        <button
-          className={`hud-btn ${isLiveTracking ? 'live-gps-active' : ''} ${isLocating ? 'loading' : ''}`}
-          onClick={onLocateUser}
-          title={isLiveTracking ? t('mapControls.locateTooltipLive') : t('mapControls.locateTooltip')}
-        >
-          {isLiveTracking && <span className="hud-live-indicator" />}
-          <Crosshair size={18} />
-          <span className="hud-label">
-            {isLocating
-              ? t('mapControls.locating')
-              : isLiveTracking
-              ? t('mapControls.locateMeLive')
-              : t('mapControls.locateMe')}
-          </span>
-        </button>
-
-        {/* Legend Toggle */}
-        <button
-          className={`hud-btn ${isLegendOpen ? 'active' : ''}`}
-          onClick={() => setIsLegendOpen(!isLegendOpen)}
-          title={t('mapControls.legendTooltip')}
-        >
-          <Layers size={18} />
-          <span className="hud-label">{t('mapControls.legendBtn')}</span>
-        </button>
-      </div>
+      {showHud && (
+        <div className="floating-hud">
+          <MapActionButtons
+            layout="hud"
+            isLegendOpen={isLegendOpen}
+            onToggleLegend={onToggleLegend}
+            {...actions}
+          />
+        </div>
+      )}
 
       {/* Legend Modal / Card */}
       {isLegendOpen && (
         <div className="legend-card">
           <div className="legend-header">
             <h4>{t('mapControls.legendTitle')}</h4>
-            <button className="legend-close-btn" onClick={() => setIsLegendOpen(false)}>
+            <button className="legend-close-btn" onClick={onToggleLegend}>
               &times;
             </button>
           </div>

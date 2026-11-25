@@ -6,8 +6,9 @@ A phone is a viewport narrower than 768px. 768px and wider is a tablet or a desk
 
 ## What will change
 
-- `src/components/Header.tsx` shows a menu button on phones, after the search field. The button is the standard three-line icon and has an accessible name.
-- On phones the header keeps the name, the search field, Propose Tree, and Sign In (or the signed-in account). Language, theme, and Settings move into the menu.
+- On a phone the header bar is hidden. A single floating burger button sits at the top right. Add tree and Needs Water stay on the map, centered along the bottom, so they can be used without opening the menu.
+- On a phone the zoom buttons are hidden. Pinching the map still zooms. At 768px and wider the zoom buttons stay at the bottom right.
+- Opening it slides a solid drawer in from the right. Search sits under the title. The actions are grouped into Map, Account, and Preferences. Needs Water shows an on/off switch. Language shows the current choice beside its label.
 - `src/components/MapControls.tsx` hides the bottom bar on phones. Needs Water, Where am I, and Legend move into the same menu. The legend card itself stays the card that already exists.
 - `src/App.tsx` owns whether the menu is open, so the header button and the map actions share one panel.
 - `src/styles/components.css` draws the panel and hides the moved controls only under 768px.
@@ -17,7 +18,7 @@ Opening Settings, Legend, Propose Tree, or Sign In closes the menu and opens tha
 
 ## Acceptance criteria
 
-- At 390px the header shows the name, search, Propose Tree, Sign In, and the menu button. Language, theme, Settings, and the three bottom buttons are not on the map until the menu is open.
+- At 390px the map shows the floating menu button, plus Add tree and Needs Water along the bottom. The zoom buttons are hidden, and pinching the map still zooms. Search, Propose Tree, Sign In, language, theme, Settings, and the three map actions appear when the drawer slides in from the right.
 - Opening the menu shows language, theme, Settings, Needs Water, Where am I, and Legend. Each one still does what it does today.
 - At 768px and at 1280px there is no menu button. Language, theme, Settings, and the three bottom buttons stay where they are now.
 - The menu closes on Escape, on an outside tap, and when Settings or Legend opens.

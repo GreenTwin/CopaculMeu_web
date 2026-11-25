@@ -6,9 +6,11 @@ import { navigateTo } from '../utils/navigation';
 
 interface UserMenuProps {
   onOpenAdminModal?: () => void;
+  onDismissMenu?: () => void;
+  variant?: 'header' | 'drawer';
 }
 
-export const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdminModal }) => {
+export const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdminModal, onDismissMenu, variant = 'header' }) => {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -26,11 +28,24 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdminModal }) => {
   }, []);
 
   if (!isAuthenticated || !user) {
+    const signIn = () => {
+      onDismissMenu?.();
+      openAuthModal('login');
+    };
+    if (variant === 'drawer') {
+      return (
+        <button type="button" className="mobile-menu-item" onClick={signIn} aria-label={t('header.authBtn')}>
+          <LogIn size={20} />
+          <span className="mobile-menu-text">{t('header.authBtn')}</span>
+        </button>
+      );
+    }
     return (
       <button
         type="button"
         className="auth-header-login-btn"
-        onClick={() => openAuthModal('login')}
+        onClick={signIn}
+        aria-label={t('header.authBtn')}
         title={t('userMenu.loginPromptTooltip')}
       >
         <LogIn size={16} />
@@ -39,7 +54,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdminModal }) => {
     );
   }
 
-  // Generate initials from name or email
   const initials = (user.name || user.email)
     .split(' ')
     .filter(Boolean)
@@ -49,12 +63,40 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdminModal }) => {
 
   const firstName = user.name ? user.name.split(' ')[0] : user.email.split('@')[0];
 
+  if (variant === 'drawer') {
+    return (
+      <>
+        <div className="mobile-menu-account">
+          <span className="mobile-menu-avatar" aria-hidden="true">{initials}</span>
+          <span className="mobile-menu-copy">
+            <span className="mobile-menu-text">{firstName}</span>
+            <span className="mobile-menu-hint">{user.email}</span>
+          </span>
+        </div>
+        <button
+          type="button"
+          className="mobile-menu-item"
+          onClick={() => {
+            onDismissMenu?.();
+            logout();
+          }}
+        >
+          <LogOut size={20} />
+          <span className="mobile-menu-text">{t('userMenu.signOut')}</span>
+        </button>
+      </>
+    );
+  }
+
   return (
     <div className="user-menu-container" ref={containerRef}>
       <button
         type="button"
         className={`user-menu-trigger ${isOpen ? 'active' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          onDismissMenu?.();
+          setIsOpen(!isOpen);
+        }}
         title={t('userMenu.profileTooltip', { name: user.name || user.email })}
       >
         <div className="user-avatar-circle">

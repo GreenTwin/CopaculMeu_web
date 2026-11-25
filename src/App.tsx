@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapCanvas } from './features/map/MapCanvas';
 import { Header } from './components/Header';
+import { MobileMenu } from './components/MobileMenu';
+import { MapQuickActions } from './components/MapQuickActions';
 import { MapControls } from './components/MapControls';
 import { TreeDrawer } from './features/tree-details/TreeDrawer';
 import { ProposeTreeModal } from './components/ProposeTreeModal';
@@ -20,6 +22,7 @@ import {
 import type { TreeResponse, BoundingBox, TreeCheckinRequest, TreeCreateRequest } from './types/tree';
 import { TIMISOARA_DEFAULT_CENTER } from './constants/map';
 import { getAppConfig, type AppConfig } from './services/config';
+import { usePhoneLayout } from './hooks/usePhoneLayout';
 
 export const App: React.FC = () => {
   const currentPath = useCurrentPath();
@@ -36,6 +39,13 @@ export const App: React.FC = () => {
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [isProposeOpen, setIsProposeOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const isPhone = usePhoneLayout();
+
+  useEffect(() => {
+    if (!isPhone) setIsMenuOpen(false);
+  }, [isPhone]);
 
   const debounceTimeoutRef = useRef<number | null>(null);
   const currentBoundsRef = useRef<BoundingBox | null>(null);
@@ -235,15 +245,35 @@ export const App: React.FC = () => {
         <AuthProvider>
           <div className="app-container">
             {/* Top Header */}
-            <Header
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              apiStatus={apiStatus}
-              onOpenProposeModal={() => setIsProposeOpen(true)}
-              onOpenSettingsModal={() => setIsSettingsOpen(true)}
-              onOpenAdminModal={() => navigateTo('/admin/users')}
-              totalVisibleTrees={filteredTrees.length}
-            />
+            {isPhone ? (
+              <MobileMenu
+                isOpen={isMenuOpen}
+                onToggle={() => setIsMenuOpen((open) => !open)}
+                onClose={() => setIsMenuOpen(false)}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                onOpenProposeModal={() => setIsProposeOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onOpenAdminModal={() => navigateTo('/admin/users')}
+                onLocateUser={handleLocateUser}
+                isLocating={isLocating}
+                filterDroughtOnly={filterDroughtOnly}
+                onToggleDroughtFilter={() => setFilterDroughtOnly((value) => !value)}
+                isLiveTracking={appConfig.locationMode === 'live' && !isProposeOpen}
+                isLegendOpen={isLegendOpen}
+                onToggleLegend={() => setIsLegendOpen((open) => !open)}
+              />
+            ) : (
+              <Header
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                apiStatus={apiStatus}
+                onOpenProposeModal={() => setIsProposeOpen(true)}
+                onOpenSettingsModal={() => setIsSettingsOpen(true)}
+                onOpenAdminModal={() => navigateTo('/admin/users')}
+                totalVisibleTrees={filteredTrees.length}
+              />
+            )}
 
             {/* Main Map with clean cluster bubbles */}
             <MapCanvas
@@ -260,9 +290,20 @@ export const App: React.FC = () => {
               onLocateUser={handleLocateUser}
               isLocating={isLocating}
               filterDroughtOnly={filterDroughtOnly}
-              onToggleDroughtFilter={() => setFilterDroughtOnly(!filterDroughtOnly)}
+              onToggleDroughtFilter={() => setFilterDroughtOnly((value) => !value)}
               isLiveTracking={appConfig.locationMode === 'live' && !isProposeOpen}
+              showHud={!isPhone}
+              isLegendOpen={isLegendOpen}
+              onToggleLegend={() => setIsLegendOpen((open) => !open)}
             />
+
+            {isPhone && !isMenuOpen && !selectedTree && (
+              <MapQuickActions
+                filterDroughtOnly={filterDroughtOnly}
+                onToggleDroughtFilter={() => setFilterDroughtOnly((value) => !value)}
+                onOpenProposeModal={() => setIsProposeOpen(true)}
+              />
+            )}
 
             {/* Tree Details Drawer & Check-in Flow */}
             <TreeDrawer
