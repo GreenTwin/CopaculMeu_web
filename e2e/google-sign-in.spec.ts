@@ -45,6 +45,38 @@ async function stubGoogleIdentity(page: Page, credential: string) {
   );
 }
 
+test('sign-in overlay keeps the Google button clickable', async ({ page }) => {
+  await useEnglish(page);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  const button = page.locator('.auth-google-button');
+  await expect(button).toBeVisible();
+  await button.evaluate((element) =>
+    Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+  );
+
+  const blocking = await button.evaluate((element) => {
+    const found: string[] = [];
+    let node: HTMLElement | null = element;
+    while (node) {
+      const style = getComputedStyle(node);
+      const backdrop = style.backdropFilter || 'none';
+      const transform = style.transform || 'none';
+      const filter = style.filter || 'none';
+      if (backdrop !== 'none' || transform !== 'none' || filter !== 'none') {
+        found.push(node.className || node.tagName);
+      }
+      node = node.parentElement;
+    }
+    return found;
+  });
+
+  expect(blocking).toEqual([]);
+  const scrimBlur = await page.locator('.modal-backdrop').evaluate((element) =>
+    getComputedStyle(element, '::before').backdropFilter,
+  );
+  expect(scrimBlur).toContain('blur');
+});
+
 test('shows the Google button on sign in and register', async ({ page }) => {
   await useEnglish(page);
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
