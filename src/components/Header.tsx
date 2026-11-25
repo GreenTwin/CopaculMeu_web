@@ -77,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           className={`propose-tree-btn ${!isAuthenticated ? 'auth-restricted' : ''}`}
           onClick={handleProposeClick}
+          aria-label={t('header.proposeTreeBtn')}
           title={
             isAuthenticated
               ? t('header.proposeTreeTooltip')

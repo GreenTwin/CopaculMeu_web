@@ -829,6 +829,19 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
+.form-group select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 40px;
+  line-height: 1.4;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1072,6 +1085,15 @@
   transition: color var(--transition-fast);
 }
 
+.propose-form .gps-minimap-container {
+  height: 230px;
+}
+
+.step-name-short,
+.propose-btn-short {
+  display: none;
+}
+
 .step-bubble.active .step-circle {
   background: var(--primary-600);
   color: #ffffff;
@@ -1236,8 +1258,9 @@
 .species-control-actions {
   display: flex;
   align-items: center;
+  align-self: stretch;
   gap: 2px;
-  padding-right: 8px;
+  padding-right: 14px;
 }
 
 .species-loading-icon {
@@ -1264,12 +1287,20 @@
   color: var(--neutral-800);
 }
 
+.species-action-btn.toggle-btn {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 .species-action-btn.toggle-btn svg {
+  display: block;
+  transform: translateY(1px);
   transition: transform var(--transition-normal);
 }
 
 .species-action-btn.toggle-btn.open svg {
-  transform: rotate(180deg);
+  transform: translateY(1px) rotate(180deg);
   color: var(--primary-600);
 }
 
@@ -2557,6 +2588,114 @@
   }
 }
 
+/* Phone propose sheet. Tablets from 768px keep the centered card. */
+@media (max-width: 767px) {
+  .modal-backdrop:has(.propose-modal) {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .propose-modal.modal-card {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    animation: none;
+  }
+
+  .propose-modal .modal-header {
+    flex-shrink: 0;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+  }
+
+  .propose-modal .propose-form {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    padding: 16px 16px 0;
+  }
+
+  .propose-modal .step-instruction-box {
+    display: none;
+  }
+
+  .propose-modal .gps-minimap-container {
+    height: 34dvh;
+    min-height: 180px;
+  }
+
+  .propose-modal .adjustment-meter-info {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 6px;
+  }
+
+  .propose-modal .limit-hint {
+    flex-basis: 100%;
+  }
+
+  .propose-modal .step-coords-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .propose-modal .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .propose-modal .coords-item:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .propose-modal .coords-val {
+    white-space: nowrap;
+  }
+
+  .propose-modal .step-name-long,
+  .propose-modal .propose-btn-long {
+    display: none;
+  }
+
+  .propose-modal .step-name-short,
+  .propose-modal .propose-btn-short {
+    display: inline;
+  }
+
+  .propose-modal .species-dropdown-popup {
+    position: static;
+    top: auto;
+    margin-top: 8px;
+    box-shadow: none;
+    animation: none;
+  }
+
+  .propose-modal .species-dropdown-list {
+    max-height: 220px;
+  }
+
+  .propose-modal .modal-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0 -16px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: #ffffff;
+  }
+
+  .propose-modal .modal-actions .cancel-btn,
+  .propose-modal .modal-actions .submit-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+  }
+
+  [data-theme='dark'] .propose-modal .modal-actions {
+    background: #1e293b;
+  }
+}
+
 /* --- Auth Requirement & Guarding for Tree Propose and Check-in --- */
 .auth-context-banner {
   display: flex;
@@ -3344,17 +3483,30 @@
 }
 
 [data-theme='dark'] .form-group input,
-[data-theme='dark'] .form-group select,
 [data-theme='dark'] .form-group textarea {
   background: #0f172a;
   border-color: #334155;
   color: #f8fafc;
 }
 
+[data-theme='dark'] .form-group select {
+  background-color: #0f172a;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
 [data-theme='dark'] .form-group input:focus,
-[data-theme='dark'] .form-group select:focus,
 [data-theme='dark'] .form-group textarea:focus {
   background: #0b1120;
+  border-color: #10b981;
+}
+
+[data-theme='dark'] .form-group select:focus {
+  background-color: #0b1120;
   border-color: #10b981;
 }
 
