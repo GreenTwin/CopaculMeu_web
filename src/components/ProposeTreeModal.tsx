@@ -24,6 +24,9 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
   const { isAuthenticated, openAuthModal } = useAuth();
   const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2>(1);
+  const [isPhoneSheet, setIsPhoneSheet] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
+  );
   const [species, setSpecies] = useState('');
   const [availableSpecies, setAvailableSpecies] = useState<SpeciesResponse[]>([]);
   const [isLoadingSpecies, setIsLoadingSpecies] = useState(false);
@@ -114,6 +117,14 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
         });
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsPhoneSheet(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -210,11 +221,17 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card propose-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-card propose-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="propose-tree-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div className="modal-title-with-icon">
             <TreePine size={20} color="#10b981" />
-            <h3>{t('proposeTree.modalTitle')}</h3>
+            <h3 id="propose-tree-title">{t('proposeTree.modalTitle')}</h3>
           </div>
           <button className="close-btn" onClick={onClose} title={t('common.close')}>
             <X size={18} />
@@ -239,7 +256,8 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                 onClick={() => setStep(1)}
               >
                 <span className="step-circle">{step > 1 ? <Check size={14} /> : '1'}</span>
-                <span className="step-name">{t('proposeTree.step1Nav')}</span>
+                <span className="step-name step-name-long">{t('proposeTree.step1Nav')}</span>
+                <span className="step-name step-name-short">{t('proposeTree.step1NavShort')}</span>
               </button>
               <div className="step-track" />
               <button
@@ -248,7 +266,8 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                 onClick={() => setStep(2)}
               >
                 <span className="step-circle">2</span>
-                <span className="step-name">{t('proposeTree.step2Nav')}</span>
+                <span className="step-name step-name-long">{t('proposeTree.step2Nav')}</span>
+                <span className="step-name step-name-short">{t('proposeTree.step2NavShort')}</span>
               </button>
             </div>
 
@@ -271,7 +290,6 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     onRecalibrate={fetchDeviceGps}
                     isLocating={isLocating}
                     gpsStatus={gpsStatus}
-                    height={230}
                   />
                 </div>
 
@@ -302,7 +320,8 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     onClick={() => setStep(2)}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <span>{t('proposeTree.continueStep2Btn')}</span>
+                    <span className="propose-btn-long">{t('proposeTree.continueStep2Btn')}</span>
+                    <span className="propose-btn-short">{t('proposeTree.nextBtn')}</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -343,9 +362,15 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     onChange={setSpecies}
                     availableSpecies={availableSpecies}
                     isLoading={isLoadingSpecies}
-                    placeholder={isLoadingSpecies ? t('proposeTree.catalogLoading') : t('proposeTree.speciesPlaceholderSearch')}
+                    placeholder={
+                      isLoadingSpecies
+                        ? t('proposeTree.catalogLoading')
+                        : isPhoneSheet
+                          ? t('proposeTree.speciesPlaceholderShort')
+                          : t('proposeTree.speciesPlaceholderSearch')
+                    }
                     required
-                    autoFocus
+                    autoFocus={!isPhoneSheet}
                   />
                 </div>
 
@@ -442,10 +467,12 @@ export const ProposeTreeModal: React.FC<ProposeTreeModalProps> = ({
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <ArrowLeft size={16} />
-                    <span>{t('proposeTree.backStep1Btn')}</span>
+                    <span className="propose-btn-long">{t('proposeTree.backStep1Btn')}</span>
+                    <span className="propose-btn-short">{t('proposeTree.backShort')}</span>
                   </button>
                   <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                    {isSubmitting ? t('proposeTree.submittingBtn') : t('proposeTree.submitBtn')}
+                    <span className="propose-btn-long">{isSubmitting ? t('proposeTree.submittingBtn') : t('proposeTree.submitBtn')}</span>
+                    <span className="propose-btn-short">{isSubmitting ? t('proposeTree.submittingBtn') : t('proposeTree.submitShort')}</span>
                   </button>
                 </div>
               </form>
