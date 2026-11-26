@@ -729,17 +729,27 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   z-index: 2000;
+}
+
+.modal-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   animation: fadeIn 200ms ease-out;
 }
 
 .modal-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 520px;
   background: #ffffff;
@@ -748,7 +758,17 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: modalScale 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalFade 250ms ease-out;
+}
+
+@keyframes modalFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalScale {
