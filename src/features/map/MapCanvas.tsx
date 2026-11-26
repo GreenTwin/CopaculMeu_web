@@ -12,6 +12,22 @@ import { darkMatterStyle } from '../../styles/darkMatterStyle';
 import { useTheme } from '../../context/ThemeContext';
 import { usePhoneLayout } from '../../hooks/usePhoneLayout';
 import { PHONE_LAYOUT_MAX_WIDTH, showsMapZoomControl } from '../../utils/viewport';
+import { useLanguage } from '../../context/LanguageContext';
+
+// Canopy height overlay for Timișoara: XYZ tiles built from the Meta & WRI Global Canopy Height Map
+// (~1.2 m, imagery ~2018-2019). Regenerate with scripts/build-canopy-height-layer.py.
+const CANOPY_TILES_URL = '/layers/canopy-height/{z}/{x}/{y}.png';
+const CANOPY_BOUNDS: L.LatLngBoundsExpression = [
+  [45.67, 21.08],
+  [45.83, 21.38],
+];
+const CANOPY_ATTRIBUTION =
+  'Canopy height (imagery 2018–2019) © Meta &amp; World Resources Institute (CC BY 4.0)';
+const CANOPY_LEGEND = [
+  { color: 'rgb(163, 215, 110)', label: '3–10 m' },
+  { color: 'rgb(76, 175, 80)', label: '10–20 m' },
+  { color: 'rgb(27, 122, 62)', label: '> 20 m' },
+];
 
 // Register MapLibre Web Worker for Vite background vector tile processing
 setWorkerUrl(workerUrl);
@@ -43,6 +59,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const superclusterRef = useRef<Supercluster | null>(null);
   const currentThemeRef = useRef(theme);
+  const { t } = useLanguage();
+  const treeCoverLayerRef = useRef<L.TileLayer | null>(null);
 
   // Initialize Leaflet Map with OpenMapTiles GL Theme (Terrain for Light, Dark Matter for Dark)
   useEffect(() => {
@@ -82,6 +100,17 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     } catch (err) {
       console.warn('Could not attach MapLibre listeners:', err);
     }
+
+    // Optional analysis overlays (off by default), toggled from the layers control
+    treeCoverLayerRef.current = L.tileLayer(CANOPY_TILES_URL, {
+      bounds: CANOPY_BOUNDS,
+      minZoom: 11,
+      minNativeZoom: 12,
+      maxNativeZoom: 17,
+      maxZoom: 19,
+      opacity: 0.8,
+      attribution: CANOPY_ATTRIBUTION,
+    });
 
     const markersLayer = L.layerGroup().addTo(map);
     markersLayerRef.current = markersLayer;
@@ -124,6 +153,49 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       console.warn('Could not switch MapLibre style:', err);
     }
   }, [theme]);
+  // Layers control (rebuilt when the language changes so labels are translated)
+  useEffect(() => {
+    const map = mapRef.current;
+    const treeCoverLayer = treeCoverLayerRef.current;
+    if (!map || !treeCoverLayer) return;
+
+    const control = L.control.layers(
+      undefined,
+      { [t('mapControls.treeCoverLayer')]: treeCoverLayer },
+      { position: MAP_ZOOM_CONTROL_POSITION, collapsed: true }
+    ).addTo(map);
+
+    // Height legend, visible only while the canopy layer is on
+    const legend = new L.Control({ position: MAP_ZOOM_CONTROL_POSITION });
+    legend.onAdd = () => {
+      const div = L.DomUtil.create('div', 'canopy-legend');
+      div.innerHTML =
+        `<div class="canopy-legend-title">${t('mapControls.canopyLegendTitle')}</div>` +
+        CANOPY_LEGEND.map(
+          (item) =>
+            `<div class="canopy-legend-row"><span class="canopy-legend-swatch" style="background:${item.color}"></span>${item.label}</div>`
+        ).join('') +
+        `<div class="canopy-legend-date">${t('mapControls.canopyLegendDate')}</div>`;
+      return div;
+    };
+    const showLegend = (e: L.LayersControlEvent) => {
+      if (e.layer === treeCoverLayer) legend.addTo(map);
+    };
+    const hideLegend = (e: L.LayersControlEvent) => {
+      if (e.layer === treeCoverLayer) legend.remove();
+    };
+    map.on('overlayadd', showLegend);
+    map.on('overlayremove', hideLegend);
+    if (map.hasLayer(treeCoverLayer)) legend.addTo(map);
+
+    return () => {
+      map.off('overlayadd', showLegend);
+      map.off('overlayremove', hideLegend);
+      legend.remove();
+      control.remove();
+    };
+  }, [t]);
+
   useEffect(() => {
     const cluster = new Supercluster({
       radius: 60,
