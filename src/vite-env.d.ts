@@ -5,6 +5,10 @@ interface ImportMetaEnv {
   readonly VITE_BACKEND_HOST?: string;
   /** Public Google web client id */
   readonly VITE_GOOGLE_CLIENT_ID?: string;
+  /** Dev-only. Sign in as a local admin. Ignored in production builds. */
+  readonly VITE_LOCAL_ADMIN?: string;
+  /** Dev-only. Fill the admin users table with dummy rows. Ignored in production builds. */
+  readonly VITE_LOCAL_DUMMY_USERS?: string;
 }
 
 interface GoogleCredentialResponse {

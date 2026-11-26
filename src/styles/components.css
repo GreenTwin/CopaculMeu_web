@@ -4169,6 +4169,89 @@
   margin-bottom: 14px;
 }
 
+.admin-user-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.admin-user-dialog {
+  width: min(420px, 100%);
+  padding: 20px;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
+}
+
+.admin-user-dialog h3 {
+  margin: 0 0 12px;
+}
+
+.admin-user-dialog p {
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+
+.admin-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.admin-dialog-field input,
+.admin-dialog-field select {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+}
+
+.admin-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-dialog-actions button,
+.admin-edit-user-btn,
+.admin-remove-user-btn {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.admin-remove-user-btn,
+.admin-dialog-actions button:last-child {
+  border-color: #b91c1c;
+  color: #b91c1c;
+}
+
+[data-theme='dark'] .admin-user-dialog,
+[data-theme='dark'] .admin-dialog-field input,
+[data-theme='dark'] .admin-dialog-field select,
+[data-theme='dark'] .admin-dialog-actions button,
+[data-theme='dark'] .admin-edit-user-btn,
+[data-theme='dark'] .admin-remove-user-btn {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
 .admin-feedback-banner.success {
   background: #ecfdf5;
   color: #065f46;
@@ -4489,6 +4572,106 @@
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-md);
   overflow-x: auto;
+}
+
+.admin-users-directory {
+  overflow: hidden;
+}
+
+.admin-users-directory .admin-users-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.admin-users-directory .admin-users-table th,
+.admin-users-directory .admin-users-table td {
+  height: var(--user-row-height, 52px);
+  max-height: var(--user-row-height, 52px);
+  padding: 0 10px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.admin-users-directory .admin-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  height: 32px;
+}
+
+.admin-users-directory .admin-user-cell strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.admin-users-directory .admin-badge-role,
+.admin-users-directory .admin-badge-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 24px;
+  padding: 0 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.admin-users-directory .admin-badge-role span,
+.admin-users-directory .admin-badge-status span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-users-directory .admin-trees-cell {
+  text-align: center;
+}
+
+.admin-users-view {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.admin-users-view .admin-users-toolbar {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.admin-users-view .admin-search-box {
+  height: var(--user-control-height, 36px);
+  min-width: 0;
+  max-width: none;
+}
+
+.admin-users-view .admin-search-box input,
+.admin-users-view .admin-filter-group select,
+.admin-users-view .admin-refresh-btn {
+  height: var(--user-control-height, 36px);
+  box-sizing: border-box;
+}
+
+.admin-users-view .admin-toolbar-filters {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.admin-users-view .admin-filter-group select,
+.admin-users-view .admin-refresh-btn {
+  width: 168px;
+}
+
+.admin-users-view .admin-refresh-btn {
+  justify-content: center;
 }
 
 .admin-users-table {
@@ -5772,7 +5955,9 @@
 /* --- Main Viewport Body --- */
 .admin-main-viewport {
   flex: 1;
+  overflow-x: hidden;
   overflow-y: auto;
+  min-width: 0;
   padding: 28px 32px 48px;
   background: var(--neutral-50, #f8fafc);
 }

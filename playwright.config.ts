@@ -13,6 +13,10 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
+    env: {
+      VITE_LOCAL_ADMIN: 'false',
+      VITE_LOCAL_DUMMY_USERS: 'false',
+    },
   },
   projects: [
     {

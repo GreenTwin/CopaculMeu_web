@@ -19,11 +19,9 @@ import {
   Save,
   Search,
   Ban,
-  RotateCcw,
   Clock,
   ChevronLeft,
   ChevronRight,
-  UserCheck,
   ArrowLeft,
   LogOut,
   Sun,
@@ -48,12 +46,16 @@ import {
   rejectTreeProposal,
   createSpeciesAsAdmin,
   fetchAdminUsers,
-  approveAdminUser,
-  updateAdminUserStatus,
   fetchEmailTemplates,
   updateEmailTemplate,
 } from '../services/admin';
 import { navigateTo } from '../utils/navigation';
+import {
+  USER_TABLE_COLUMNS,
+  USER_TABLE_CONTROL_HEIGHT_PX,
+  USER_TABLE_ROW_HEIGHT_PX,
+  formatAdminTimestamp,
+} from './userDirectory';
 
 export type AdminTab = 'users' | 'proposals' | 'species' | 'emails';
 
@@ -88,8 +90,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ currentPath }) => {
   const [pageSize] = useState(15);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
-  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
-  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [userFeedback, setUserFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // --- Tab 2: Proposals State ---
@@ -295,65 +295,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ currentPath }) => {
       </div>
     );
   }
-
-  // --- Tab 1: User Actions ---
-  const handleApproveUser = async (targetUser: User) => {
-    setApprovingUserId(targetUser.id);
-    setUserFeedback(null);
-    try {
-      await approveAdminUser(targetUser.id);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === targetUser.id ? { ...u, status: 'ACTIVE' } : u))
-      );
-      setUserFeedback({
-        ok: true,
-        msg: t('admin.statusChangedSuccess', {
-          name: targetUser.name || targetUser.email,
-          status: t('admin.statusActive'),
-        }),
-      });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Eroare la aprobarea utilizatorului';
-      setUserFeedback({ ok: false, msg });
-    } finally {
-      setApprovingUserId(null);
-    }
-  };
-
-  const handleSetUserStatus = async (
-    targetUser: User,
-    newStatus: 'ACTIVE' | 'UNCONFIRMED' | 'SUSPENDED'
-  ) => {
-    if (targetUser.status === newStatus) return;
-    setUpdatingUserId(targetUser.id);
-    setUserFeedback(null);
-    try {
-      const updated = await updateAdminUserStatus(targetUser.id, newStatus);
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === targetUser.id ? { ...u, status: updated.status || newStatus } : u
-        )
-      );
-      const statusLabel =
-        newStatus === 'ACTIVE'
-          ? t('admin.statusActive')
-          : newStatus === 'SUSPENDED'
-            ? t('admin.statusSuspended')
-            : t('admin.statusUnconfirmed');
-      setUserFeedback({
-        ok: true,
-        msg: t('admin.statusChangedSuccess', {
-          name: targetUser.name || targetUser.email,
-          status: statusLabel,
-        }),
-      });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Eroare la actualizarea statusului';
-      setUserFeedback({ ok: false, msg });
-    } finally {
-      setUpdatingUserId(null);
-    }
-  };
 
   // --- Tab 2: Proposal Actions ---
   const handleApprove = async (tree: TreeResponse) => {
@@ -630,7 +571,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ currentPath }) => {
           {/* SECTION: USERS */}
           {/* =============================================================== */}
           {activeTab === 'users' && (
-            <div className="admin-view-container">
+            <div
+              className="admin-view-container admin-users-view"
+              style={{
+                ['--user-row-height' as string]: `${USER_TABLE_ROW_HEIGHT_PX}px`,
+                ['--user-control-height' as string]: `${USER_TABLE_CONTROL_HEIGHT_PX}px`,
+              }}
+            >
               {/* Header Box */}
               <div className="admin-view-header">
                 <div>
@@ -729,22 +676,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ currentPath }) => {
                 </div>
               ) : (
                 <div className="admin-table-card">
-                  <div className="admin-users-table-wrap">
+                  <div className="admin-users-table-wrap admin-users-directory">
                     <table className="admin-users-table">
+                      <colgroup>
+                        {USER_TABLE_COLUMNS.map((column) => (
+                          <col key={column.key} style={{ width: `${column.widthPercent}%` }} />
+                        ))}
+                      </colgroup>
                       <thead>
                         <tr>
                           <th>{t('admin.userNameCol')}</th>
                           <th>{t('admin.userEmailCol')}</th>
-                          <th>{t('admin.userRoleCol')}</th>
+                          <th>{t('admin.userTypeCol')}</th>
+                          <th>{t('admin.lastLoginCol')}</th>
+                          <th>{t('admin.createdAtCol')}</th>
+                          <th>{t('admin.treesAddedCol')}</th>
                           <th>{t('admin.userStatusCol')}</th>
-                          <th>{t('admin.changeStatusLabel')}</th>
-                          <th>{t('admin.userActionsCol')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredUsers.map((u) => {
-                          const isActioningThisUser =
-                            updatingUserId === u.id || approvingUserId === u.id;
+                          const displayName = u.name || t('userMenu.unnamedUser');
                           const initials = (u.name || u.email)
                             .split(' ')
                             .filter(Boolean)
@@ -753,41 +705,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({ currentPath }) => {
                             .join('') || 'U';
 
                           return (
-                            <tr key={u.id} className={isActioningThisUser ? 'row-updating' : ''}>
-                              {/* Name & Avatar */}
+                            <tr key={u.id}>
                               <td>
                                 <div className="admin-user-cell">
                                   <div
-                                    className={`admin-avatar-small ${u.role === 'ADMIN' ? 'avatar-admin' : 'avatar-user'
-                                      }`}
+                                    className={`admin-avatar-small ${u.role === 'ADMIN' ? 'avatar-admin' : 'avatar-user'}`}
                                   >
                                     {initials}
                                   </div>
-                                  <div>
-                                    <strong>{u.name || t('userMenu.unnamedUser')}</strong>
-                                    {u.createdAt && (
-                                      <span className="admin-user-date">
-                                        {new Date(u.createdAt).toLocaleDateString(undefined, {
-                                          dateStyle: 'short',
-                                        })}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <strong title={displayName}>{displayName}</strong>
                                 </div>
                               </td>
-
-                              {/* Email */}
-                              <td className="user-email-cell">{u.email}</td>
-
-                              {/* Role */}
+                              <td className="user-email-cell" title={u.email}>{u.email}</td>
                               <td>
                                 <span className={`admin-badge-role ${u.role?.toLowerCase()}`}>
                                   {u.role === 'ADMIN' ? <ShieldCheck size={11} /> : null}
                                   <span>{u.role}</span>
                                 </span>
                               </td>
-
-                              {/* Current Status */}
+                              <td>{formatAdminTimestamp(u.lastLoginAt)}</td>
+                              <td>{formatAdminTimestamp(u.createdAt)}</td>
+                              <td className="admin-trees-cell">{u.treesAdded ?? 0}</td>
                               <td>
                                 <span className={`admin-badge-status ${u.status?.toLowerCase()}`}>
                                   {u.status === 'ACTIVE' && <CheckCircle2 size={11} />}
@@ -795,87 +733,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ currentPath }) => {
                                   {u.status === 'SUSPENDED' && <Ban size={11} />}
                                   <span>{u.status}</span>
                                 </span>
-                              </td>
-
-                              {/* Change Status Dropdown */}
-                              <td>
-                                <div className="admin-status-select-wrap">
-                                  <select
-                                    className="admin-status-select"
-                                    value={u.status}
-                                    disabled={isActioningThisUser}
-                                    onChange={(e) =>
-                                      handleSetUserStatus(
-                                        u,
-                                        e.target.value as 'ACTIVE' | 'UNCONFIRMED' | 'SUSPENDED'
-                                      )
-                                    }
-                                    title={t('admin.changeStatusPrompt')}
-                                  >
-                                    <option value="ACTIVE">{t('admin.statusActive')}</option>
-                                    <option value="UNCONFIRMED">{t('admin.statusUnconfirmed')}</option>
-                                    <option value="SUSPENDED">{t('admin.statusSuspended')}</option>
-                                  </select>
-                                  {isActioningThisUser && (
-                                    <Loader2 size={13} className="rotating select-spinner" />
-                                  )}
-                                </div>
-                              </td>
-
-                              {/* Quick Actions */}
-                              <td>
-                                <div className="admin-user-actions-cell">
-                                  {u.status === 'UNCONFIRMED' && (
-                                    <button
-                                      type="button"
-                                      className="admin-approve-user-btn"
-                                      disabled={isActioningThisUser}
-                                      onClick={() => handleApproveUser(u)}
-                                      title={t('admin.approveUserBtn')}
-                                    >
-                                      {approvingUserId === u.id ? (
-                                        <Loader2 size={12} className="rotating" />
-                                      ) : (
-                                        <UserCheck size={12} />
-                                      )}
-                                      <span>{t('admin.approveUserBtn')}</span>
-                                    </button>
-                                  )}
-
-                                  {u.status === 'ACTIVE' && (
-                                    <button
-                                      type="button"
-                                      className="admin-suspend-user-btn"
-                                      disabled={isActioningThisUser}
-                                      onClick={() => handleSetUserStatus(u, 'SUSPENDED')}
-                                      title={t('admin.suspendUserBtn')}
-                                    >
-                                      {updatingUserId === u.id ? (
-                                        <Loader2 size={12} className="rotating" />
-                                      ) : (
-                                        <Ban size={12} />
-                                      )}
-                                      <span>{t('admin.suspendUserBtn')}</span>
-                                    </button>
-                                  )}
-
-                                  {u.status === 'SUSPENDED' && (
-                                    <button
-                                      type="button"
-                                      className="admin-reactivate-user-btn"
-                                      disabled={isActioningThisUser}
-                                      onClick={() => handleSetUserStatus(u, 'ACTIVE')}
-                                      title={t('admin.reactivateUserBtn')}
-                                    >
-                                      {updatingUserId === u.id ? (
-                                        <Loader2 size={12} className="rotating" />
-                                      ) : (
-                                        <RotateCcw size={12} />
-                                      )}
-                                      <span>{t('admin.reactivateUserBtn')}</span>
-                                    </button>
-                                  )}
-                                </div>
                               </td>
                             </tr>
                           );

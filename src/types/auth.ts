@@ -6,6 +6,8 @@ export interface User {
   status: 'UNCONFIRMED' | 'ACTIVE' | 'SUSPENDED';
   createdAt?: string;
   updatedAt?: string;
+  lastLoginAt?: string | null;
+  treesAdded?: number;
 }
 
 export interface LoginRequest {
