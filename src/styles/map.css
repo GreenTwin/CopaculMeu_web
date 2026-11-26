@@ -38,6 +38,10 @@
   color: var(--primary-700) !important;
 }
 
+.map-zoom-hidden .leaflet-control-zoom {
+  display: none;
+}
+
 .leaflet-control-attribution {
   background: rgba(255, 255, 255, 0.75) !important;
   backdrop-filter: blur(4px);
