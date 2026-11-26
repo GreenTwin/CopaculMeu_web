@@ -10,6 +10,15 @@ import type {
   EmailTemplateUpdateRequest,
 } from '../types/admin';
 import { clearSpeciesCache } from './species';
+import {
+  listLocalUsers,
+  localAdminEnabled,
+  localAdminProfile,
+  localDummyUsersEnabled,
+  removeLocalUser,
+  setLocalUserStatus,
+  updateLocalUser,
+} from '../dev/localPreview';
 
 function getAuthHeaders(): Record<string, string> {
   const token = getStoredToken();
@@ -126,6 +135,9 @@ export async function fetchAdminUsers(params?: {
   status?: string;
   role?: string;
 }): Promise<UserPageResponse> {
+  if (localDummyUsersEnabled()) {
+    return Promise.resolve(listLocalUsers(params));
+  }
   const config = getAppConfig();
   const query = new URLSearchParams();
   if (params?.page !== undefined) query.set('page', String(params.page));
@@ -144,11 +156,71 @@ export async function fetchAdminUsers(params?: {
   return await res.json();
 }
 
+async function readAdminError(res: Response, fallback: string): Promise<string> {
+  try {
+    const err = await res.json();
+    if (err && typeof err.message === 'string' && err.message) {
+      return err.message;
+    }
+  } catch {
+    // The response had no JSON body.
+  }
+  return fallback;
+}
+
+/**
+ * Edit a user's name and role (Admin only)
+ * PUT /api/admin/users/{id}
+ */
+export async function updateAdminUser(
+  id: string,
+  body: { name?: string; role?: User['role'] }
+): Promise<User> {
+  if (localDummyUsersEnabled()) {
+    const callerId = localAdminEnabled() ? localAdminProfile().id : null;
+    return updateLocalUser(id, body, callerId);
+  }
+  const config = getAppConfig();
+  const res = await fetch(`${config.backendHost}/api/admin/users/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await readAdminError(res, `Eroare la editarea utilizatorului (HTTP ${res.status})`));
+  }
+  return await res.json();
+}
+
+/**
+ * Remove a user account (Admin only)
+ * DELETE /api/admin/users/{id}
+ */
+export async function removeAdminUser(id: string): Promise<void> {
+  if (localDummyUsersEnabled()) {
+    const callerId = localAdminEnabled() ? localAdminProfile().id : null;
+    removeLocalUser(id, callerId);
+    return;
+  }
+  const config = getAppConfig();
+  const res = await fetch(`${config.backendHost}/api/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (res.status === 204) {
+    return;
+  }
+  throw new Error(await readAdminError(res, `Eroare la eliminarea utilizatorului (HTTP ${res.status})`));
+}
+
 /**
  * Approve user account (Admin only)
  * PUT /api/admin/users/{id}/approve
  */
 export async function approveAdminUser(id: string): Promise<User> {
+  if (localDummyUsersEnabled()) {
+    return Promise.resolve(setLocalUserStatus(id, 'ACTIVE'));
+  }
   const config = getAppConfig();
   const res = await fetch(`${config.backendHost}/api/admin/users/${id}/approve`, {
     method: 'PUT',
@@ -176,6 +248,9 @@ export async function updateAdminUserStatus(
   id: string,
   status: 'ACTIVE' | 'UNCONFIRMED' | 'SUSPENDED'
 ): Promise<User> {
+  if (localDummyUsersEnabled()) {
+    return setLocalUserStatus(id, status);
+  }
   const config = getAppConfig();
   const url = `${config.backendHost}/api/admin/users/${id}/status?status=${encodeURIComponent(status)}`;
   const res = await fetch(url, {

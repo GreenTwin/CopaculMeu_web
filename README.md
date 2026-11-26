@@ -16,6 +16,21 @@ Playwright covers the current screen: language, sign-in, the guest gate on Propo
 npm run test:e2e
 ```
 
+## Local preview
+
+`npm run dev` can sign you in as an admin and fill `/admin/users` with dummy rows. A production build ignores these flags.
+
+Copy the two lines into `.env.local` (that file stays on your machine):
+
+```
+VITE_LOCAL_ADMIN=true
+VITE_LOCAL_DUMMY_USERS=true
+```
+
+Restart the dev server after saving the file. The same preview is available for one visit at `/admin/users?localAdmin=1&localUsers=1`. Add `localAdmin=0` or `localUsers=0` to turn that flag off for the visit, including when `.env.local` has it on. Leave both off before `npm run test:e2e` if the dev server was started with them.
+
+The dummy rows use the columns of the live `users` table: `id`, `email`, `password_hash`, `salt`, `hash_version`, `role`, `status`, `name`, `created_at`, `updated_at`, `google_sub`, `apple_sub`, `auth_method`, `password_changed_at`. The screen does not show the password hash, salt, or Google and Apple ids. `last_login_at` is not on that table yet, so the last-login column stays empty in this preview. Tree counts are the same computed field the admin list uses, not a column of `users`.
+
 ## Technical Documentation
 
 Detailed architectural decisions, data models, map clustering algorithms, UI design specifications, and mobile migration roadmap are documented in:

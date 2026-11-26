@@ -9,6 +9,7 @@ import {
   logoutUser,
   loginWithGoogle,
 } from '../services/auth';
+import { localAdminEnabled, localAdminProfile } from '../dev/localPreview';
 
 interface AuthContextType {
   user: User | null;
@@ -28,14 +29,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(getStoredUser);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const previewAdmin = localAdminEnabled();
+  const [user, setUser] = useState<User | null>(() => (previewAdmin ? localAdminProfile() : getStoredUser()));
+  const [isLoading, setIsLoading] = useState<boolean>(!previewAdmin);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register' | 'confirm_email'>('login');
   const [authContextMessage, setAuthContextMessage] = useState<string | null>(null);
 
   // Verify and hydrate current user on mount if token exists
   useEffect(() => {
+    if (localAdminEnabled()) {
+      setUser(localAdminProfile());
+      setIsLoading(false);
+      return;
+    }
     const token = getStoredToken();
     if (token) {
       fetchCurrentUser()
