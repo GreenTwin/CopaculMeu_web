@@ -2508,9 +2508,13 @@
   }
 
   .floating-hud {
-    bottom: 16px;
+    bottom: calc(16px + var(--above-system-nav));
     left: 12px;
     right: 12px;
+  }
+
+  .legend-card {
+    bottom: calc(80px + var(--above-system-nav));
   }
 
   .hud-btn .hud-label {
@@ -2525,12 +2529,17 @@
     top: auto;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--above-system-nav);
     width: 100%;
-    max-height: 82vh;
+    max-height: calc(82vh - var(--above-system-nav));
     border-radius: 20px 20px 0 0;
     border-bottom: none;
     animation: slideUpBottom 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .drawer-body {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   @keyframes slideUpBottom {

@@ -289,7 +289,7 @@ export interface AuthResponse {
 ```
 
 *   **Desktop Experience:** Map occupies 100% of the viewport. When a tree is selected, an elegant glassmorphic sidebar slides in from the right without obscuring the tree pin.
-*   **Mobile Experience:** Touch-optimized layout with gesture-friendly bottom sheet (expandable from peek height to full screen). Floating controls are placed within natural thumb reach.
+*   **Mobile Experience:** Touch-optimized layout with gesture-friendly bottom sheet (expandable from peek height to full screen). Floating controls are placed within natural thumb reach. On a phone the sheet, those controls, and the legend sit 8px above the system navigation bar (`safe-area-inset-bottom`), so the check-in button stays fully visible.
 
 ### 6.3 Viewport Synchronization & Query Debounce Strategy
 
