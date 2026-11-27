@@ -13,20 +13,19 @@ Only the Python standard library is used. Usage:
   python3 scripts/build-canopy-height-layer.py [--min-zoom 12] [--max-zoom 17]
 """
 import argparse
-import hashlib
 import json
-import math
 import os
 import re
-import shutil
 import subprocess
+import sys
 import tempfile
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from raster_tiles import TIMISOARA_BBOX, color_table_xml, run, write_xyz_tiles  # noqa: E402
 
 BASE = "/vsicurl/https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm"
 SOURCE_TILES = ["120231330", "120231321"]  # quadkey tiles covering Timișoara
-BBOX = (21.08, 45.67, 21.38, 45.83)  # west, south, east north (WGS84)
+BBOX = TIMISOARA_BBOX
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "public", "layers", "canopy-height")
 
 # Height (m) -> class: 0 transparent, 1 = 3-10 m, 2 = 10-20 m, 3 = >20 m
@@ -40,27 +39,6 @@ COLORS = [(0, 0, 0, 0), (163, 215, 110, 150), (76, 175, 80, 170), (27, 122, 62, 
 # ~5-7 m east and ~10 m north. Re-measure if the area or source changes.
 SHIFT_EAST_M = 6.0
 SHIFT_NORTH_M = 9.6
-
-ORIGIN = 20037508.342789244  # EPSG:3857 half-world size
-
-
-def run(*args):
-    subprocess.run(args, check=True)
-
-
-def lonlat_to_tile(lon, lat, z):
-    n = 2 ** z
-    x = int((lon + 180.0) / 360.0 * n)
-    y = int((1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
-    return x, y
-
-
-def tile_bounds_3857(x, y, z):
-    size = 2 * ORIGIN / 2 ** z
-    minx = -ORIGIN + x * size
-    maxy = ORIGIN - y * size
-    return minx, maxy, minx + size, maxy - size  # ulx, uly, lrx, lry
-
 
 def build_classified_raster(work, cached_chm=None):
     chm = cached_chm or os.path.join(work, "chm.tif")
@@ -85,9 +63,8 @@ def build_classified_raster(work, cached_chm=None):
     cls_vrt = os.path.join(work, "classes.vrt")
     run("gdal_translate", "-q", "-of", "VRT", chm, cls_vrt)
     text = open(cls_vrt).read()
-    table = "".join(f'<Entry c1="{r}" c2="{g}" c3="{b}" c4="{a}"/>' for r, g, b, a in COLORS)
     text = text.replace("<ColorInterp>Gray</ColorInterp>",
-                        f"<ColorInterp>Palette</ColorInterp><ColorTable>{table}</ColorTable>")
+                        f"<ColorInterp>Palette</ColorInterp>{color_table_xml(COLORS)}")
     text = re.sub(r"<(Simple|Complex)Source>", "<ComplexSource>", text)
     text = re.sub(r"</(Simple|Complex)Source>", f"<LUT>{LUT}</LUT></ComplexSource>", text)
     text = re.sub(r"<NoDataValue>.*?</NoDataValue>", "", text)
@@ -99,19 +76,6 @@ def build_classified_raster(work, cached_chm=None):
     return classes
 
 
-def render_tile(classes, z, x, y):
-    ulx, uly, lrx, lry = tile_bounds_3857(x, y, z)
-    path = os.path.join(OUT_DIR, str(z), str(x), f"{y}.png")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    subprocess.run(["gdal_translate", "-q", "-of", "PNG", "-r", "nearest", "-outsize", "256", "256",
-                    "-projwin", repr(ulx), repr(uly), repr(lrx), repr(lry), classes, path],
-                   check=True, stderr=subprocess.DEVNULL)
-    aux = path + ".aux.xml"
-    if os.path.exists(aux):
-        os.remove(aux)
-    return path
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--min-zoom", type=int, default=12)
@@ -119,36 +83,10 @@ def main():
     ap.add_argument("--chm", help="reuse an already downloaded/clipped canopy height GeoTIFF (EPSG:3857)")
     args = ap.parse_args()
 
-    shutil.rmtree(OUT_DIR, ignore_errors=True)
     with tempfile.TemporaryDirectory() as work:
         print("Downloading and classifying source raster...")
         classes = build_classified_raster(work, args.chm)
-
-        w, s, e, n = BBOX
-        jobs = []
-        for z in range(args.min_zoom, args.max_zoom + 1):
-            x0, y0 = lonlat_to_tile(w, n, z)
-            x1, y1 = lonlat_to_tile(e, s, z)
-            jobs += [(z, x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]
-        print(f"Rendering {len(jobs)} tiles...")
-        with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
-            paths = list(pool.map(lambda j: render_tile(classes, *j), jobs))
-
-    # Drop fully transparent tiles (they are all byte-identical; the most common hash)
-    hashes = {p: hashlib.md5(open(p, "rb").read()).hexdigest() for p in paths}
-    empty_hash, count = Counter(hashes.values()).most_common(1)[0]
-    removed = 0
-    for p, h in hashes.items():
-        if count > 1 and h == empty_hash:
-            os.remove(p)
-            removed += 1
-    for root, dirs, _ in os.walk(OUT_DIR, topdown=False):
-        for d in dirs:
-            full = os.path.join(root, d)
-            if not os.listdir(full):
-                os.rmdir(full)
-    print(f"Done: {len(paths) - removed} tiles kept, {removed} empty tiles removed -> {OUT_DIR}")
-
+        write_xyz_tiles(classes, OUT_DIR, BBOX, args.min_zoom, args.max_zoom)
 
 if __name__ == "__main__":
     main()
