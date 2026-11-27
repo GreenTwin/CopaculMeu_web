@@ -12,6 +12,8 @@ import { darkMatterStyle } from '../../styles/darkMatterStyle';
 import { useTheme } from '../../context/ThemeContext';
 import { usePhoneLayout } from '../../hooks/usePhoneLayout';
 import { PHONE_LAYOUT_MAX_WIDTH, showsMapZoomControl } from '../../utils/viewport';
+import { useLanguage } from '../../context/LanguageContext';
+import { ANALYSIS_LAYERS } from './analysisLayers';
 
 // Register MapLibre Web Worker for Vite background vector tile processing
 setWorkerUrl(workerUrl);
@@ -43,6 +45,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   const userMarkerRef = useRef<L.Marker | null>(null);
   const superclusterRef = useRef<Supercluster | null>(null);
   const currentThemeRef = useRef(theme);
+  const { t } = useLanguage();
+  const analysisLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
 
   // Initialize Leaflet Map with OpenMapTiles GL Theme (Terrain for Light, Dark Matter for Dark)
   useEffect(() => {
@@ -81,6 +85,22 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       }
     } catch (err) {
       console.warn('Could not attach MapLibre listeners:', err);
+    }
+
+    // Optional analysis overlays (off by default), toggled from the layers control
+    for (const def of ANALYSIS_LAYERS) {
+      analysisLayersRef.current.set(
+        def.id,
+        L.tileLayer(def.tilesUrl, {
+          bounds: def.bounds,
+          minZoom: 11,
+          minNativeZoom: 12,
+          maxNativeZoom: def.maxNativeZoom,
+          maxZoom: 19,
+          opacity: 0.8,
+          attribution: def.attribution,
+        })
+      );
     }
 
     const markersLayer = L.layerGroup().addTo(map);
@@ -124,6 +144,57 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       console.warn('Could not switch MapLibre style:', err);
     }
   }, [theme]);
+  // Layers control + per-layer legends (rebuilt when the language changes so labels are translated)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const layers = analysisLayersRef.current;
+
+    const overlays: Record<string, L.Layer> = {};
+    const legends = new Map<L.Layer, L.Control>();
+    for (const def of ANALYSIS_LAYERS) {
+      const layer = layers.get(def.id);
+      if (!layer) continue;
+      overlays[t(def.labelKey)] = layer;
+
+      // Legend, visible only while its layer is on
+      const legend = new L.Control({ position: MAP_ZOOM_CONTROL_POSITION });
+      legend.onAdd = () => {
+        const div = L.DomUtil.create('div', 'canopy-legend');
+        div.innerHTML =
+          `<div class="canopy-legend-title">${t(def.legendTitleKey)}</div>` +
+          def.legend
+            .map(
+              (item) =>
+                `<div class="canopy-legend-row"><span class="canopy-legend-swatch" style="background:${item.color}"></span>${item.label}</div>`
+            )
+            .join('') +
+          `<div class="canopy-legend-date">${t(def.legendDateKey)}</div>`;
+        return div;
+      };
+      legends.set(layer, legend);
+    }
+
+    const control = L.control
+      .layers(undefined, overlays, { position: MAP_ZOOM_CONTROL_POSITION, collapsed: true })
+      .addTo(map);
+
+    const showLegend = (e: L.LayersControlEvent) => legends.get(e.layer)?.addTo(map);
+    const hideLegend = (e: L.LayersControlEvent) => legends.get(e.layer)?.remove();
+    map.on('overlayadd', showLegend);
+    map.on('overlayremove', hideLegend);
+    legends.forEach((legend, layer) => {
+      if (map.hasLayer(layer)) legend.addTo(map);
+    });
+
+    return () => {
+      map.off('overlayadd', showLegend);
+      map.off('overlayremove', hideLegend);
+      legends.forEach((legend) => legend.remove());
+      control.remove();
+    };
+  }, [t]);
+
   useEffect(() => {
     const cluster = new Supercluster({
       radius: 60,

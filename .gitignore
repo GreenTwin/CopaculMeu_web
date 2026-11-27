@@ -38,3 +38,6 @@ Thumbs.db
 
 # Local API Cache
 openapi.json
+
+# Python
+__pycache__/
